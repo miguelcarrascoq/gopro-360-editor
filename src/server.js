@@ -8,6 +8,7 @@ import { dirname, join, resolve } from 'path';
 import { mkdir, access, readdir, readFile, unlink, stat } from 'fs/promises';
 import { homedir, tmpdir } from 'os';
 import { GoProProcessor } from './gopro-processor.js';
+import { TestGenerator } from './test-generator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,8 @@ const processor = new GoProProcessor();
 
 // Ensure temp directory exists
 const TEMP_DIR = join(process.cwd(), 'temp');
+const SAMPLES_DIR = join(process.cwd(), 'samples');
+const SAMPLE_FILE = join(SAMPLES_DIR, 'example.360');
 await mkdir(TEMP_DIR, { recursive: true });
 
 // Serve static files
@@ -168,6 +171,37 @@ async function listDirectory(dirPath) {
   };
 }
 
+let samplePromise = null;
+
+async function ensureSampleFile() {
+  await mkdir(SAMPLES_DIR, { recursive: true });
+  try {
+    const info = await stat(SAMPLE_FILE);
+    if (info.isFile() && info.size > 0) {
+      return { name: 'example.360', path: SAMPLE_FILE, size: info.size };
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+
+  console.log('Generating sample .360 file...');
+  const generator = new TestGenerator();
+  await generator.generateTestFile(SAMPLE_FILE, 5);
+  const info = await stat(SAMPLE_FILE);
+  return { name: 'example.360', path: SAMPLE_FILE, size: info.size };
+}
+
+function loadSampleFile() {
+  if (!samplePromise) {
+    samplePromise = ensureSampleFile().catch((err) => {
+      samplePromise = null;
+      console.error('Sample file unavailable:', err.message);
+      return null;
+    });
+  }
+  return samplePromise;
+}
+
 async function defaultBrowsePath(places) {
   const videos = places.find((place) => place.name === 'Videos' || place.name === 'OneDrive Videos');
   if (videos) return videos.path;
@@ -289,6 +323,7 @@ app.get('/api/fs', async (req, res) => {
   try {
     const places = await getQuickPlaces();
     const drives = await listDrives();
+    const sample = await loadSampleFile();
 
     if (req.query.view === 'computer') {
       return res.json({
@@ -298,13 +333,14 @@ app.get('/api/fs', async (req, res) => {
         atComputer: true,
         places,
         drives,
+        sample,
         entries: drives.map((drive) => ({ name: drive.name, path: drive.path, kind: 'dir' })),
       });
     }
 
     const requested = typeof req.query.path === 'string' ? req.query.path : '';
     const listing = await listDirectory(requested || await defaultBrowsePath(places));
-    res.json({ ...listing, atComputer: false, places, drives });
+    res.json({ ...listing, atComputer: false, places, drives, sample });
   } catch (err) {
     const status = err.status || (err.code === 'ENOENT' ? 404 : 500);
     const message = err.code === 'ENOENT' ? 'Folder not found' : err.message;
@@ -520,4 +556,5 @@ async function cleanupOldFiles() {
 server.listen(PORT, () => {
   console.log(`\n🎥 GoPro 360 Editor running at http://localhost:${PORT}\n`);
   cleanupOldFiles();
+  loadSampleFile();
 });

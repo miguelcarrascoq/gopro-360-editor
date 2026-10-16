@@ -22,7 +22,7 @@ export class TestGenerator {
     try {
       // Generate first stream (front-facing, with blue color)
       await this._generateVideoStream(stream1Path, duration, 'blue', '0');
-      
+
       // Generate second stream (back-facing, with green color)
       await this._generateVideoStream(stream2Path, duration, 'green', '1');
 
@@ -39,20 +39,38 @@ export class TestGenerator {
     }
   }
 
-  _generateVideoStream(outputPath, duration, color, label) {
+  async _generateVideoStream(outputPath, duration, color, label) {
+    const tryLabel = process.platform !== 'win32';
+    try {
+      await this._encodeVideoStream(outputPath, duration, color, label, tryLabel);
+    } catch (err) {
+      if (!tryLabel) throw err;
+      // drawtext needs a fontconfig setup that is often missing.
+      await this._encodeVideoStream(outputPath, duration, color, label, false);
+    }
+  }
+
+  _encodeVideoStream(outputPath, duration, color, label, withLabel) {
     return new Promise((resolve, reject) => {
       const args = [
         '-f', 'lavfi',
         '-i', `color=c=${color}:s=1920x960:d=${duration}`,
         '-f', 'lavfi',
         '-i', `sine=frequency=440:duration=${duration}`,
-        '-vf', `drawtext=text='Stream ${label}':fontsize=120:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2`,
+      ];
+      if (withLabel) {
+        args.push(
+          '-vf',
+          `drawtext=text='Stream ${label}':fontsize=120:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2`
+        );
+      }
+      args.push(
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         '-c:a', 'aac',
         '-y',
         outputPath
-      ];
+      );
 
       const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stderr = '';
@@ -63,7 +81,8 @@ export class TestGenerator {
 
       ffmpeg.on('close', (code) => {
         if (code !== 0) {
-          return reject(new Error(`Stream generation failed: ${stderr}`));
+          const tail = stderr.trim().split('\n').slice(-6).join('\n');
+          return reject(new Error(`Stream generation failed: ${tail}`));
         }
         resolve(outputPath);
       });
@@ -79,6 +98,7 @@ export class TestGenerator {
         '-map', '1:v',
         '-map', '0:a',
         '-c', 'copy',
+        '-f', 'mp4',
         '-y',
         outputPath
       ];

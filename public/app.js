@@ -530,7 +530,41 @@ class GoPro360Editor {
         }
     }
 
+    renderSample(sample) {
+        const root = document.getElementById('browser-sample');
+        const list = document.getElementById('browser-sample-list');
+        list.replaceChildren();
+        if (!sample?.path) {
+            root.hidden = true;
+            return;
+        }
+
+        root.hidden = false;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'browser-item file';
+
+        const kind = document.createElement('span');
+        kind.className = 'browser-kind';
+        kind.textContent = '.360';
+
+        const name = document.createElement('span');
+        name.className = 'browser-name';
+        name.textContent = sample.name || 'example.360';
+
+        button.append(kind, name);
+        if (Number.isFinite(sample.size)) {
+            const size = document.createElement('span');
+            size.className = 'browser-size';
+            size.textContent = formatFileSize(sample.size);
+            button.append(size);
+        }
+        button.addEventListener('click', () => this.chooseFile(sample.path));
+        list.append(button);
+    }
+
     renderBrowser(data) {
+        this.renderSample(data.sample);
         this.browserUpTarget = data.canGoUp ? data.upTarget : null;
         document.getElementById('browser-up').disabled = !data.canGoUp;
 
