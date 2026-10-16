@@ -790,6 +790,37 @@
             text-align: right;
         }
 
+        .browser-sample {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #1a1a1a;
+            border-radius: 4px;
+            padding: 0.15rem 0.25rem 0.15rem 0.7rem;
+        }
+
+        .browser-sample .browser-recent-label {
+            flex: none;
+            min-width: 3.4rem;
+        }
+
+        .browser-sample .browser-recent-list {
+            flex: 1;
+            max-height: none;
+            overflow: visible;
+            padding: 0;
+            background: transparent;
+        }
+
+        .browser-sample .browser-item {
+            padding: 0.25rem 0.45rem;
+            background: transparent;
+        }
+
+        .browser-sample .browser-item:hover {
+            background: #333;
+        }
+
         .browser-empty,
         .browser-status {
             padding: 1rem 0.75rem;
@@ -962,13 +993,13 @@
                 <p class="browser-recent-label">Recent</p>
                 <div id="browser-recent-list" class="browser-recent-list"></div>
             </div>
+            <div id="browser-sample" class="browser-sample" hidden>
+                <p class="browser-recent-label">Sample</p>
+                <div id="browser-sample-list" class="browser-recent-list"></div>
+            </div>
             <div class="browser-nav">
                 <button id="browser-up" class="btn btn-secondary" type="button">Up</button>
                 <span id="browser-current"></span>
-            </div>
-            <div id="browser-sample" class="browser-recent" hidden>
-                <p class="browser-recent-label">Sample</p>
-                <div id="browser-sample-list" class="browser-recent-list"></div>
             </div>
             <div id="browser-list" class="browser-list"></div>
             <p class="modal-hint">Click a folder to open it. Click a .360 file to load it, or paste a full path.</p>
