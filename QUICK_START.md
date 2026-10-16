@@ -24,14 +24,13 @@ Go to [http://localhost:3000](http://localhost:3000)
    - Example: `/Users/your-name/GoPro/GS010001.360`
    
 2. **Load the file** — click "Load file"
-
-3. **Generate a preview** — click "Generate preview"
+   - The preview starts on its own. The viewer shows the progress percentage
    - Wait 2–5 minutes depending on the file size
    - The preview lets you explore the 360° video by dragging with the mouse
 
-4. **Trim (optional)** — drag the green and red markers
+3. **Trim (optional)** — drag the green and red markers
 
-5. **Export** — choose a quality and click "Export MP4"
+4. **Export** — choose a quality and click "Export MP4"
    - The file is saved in the `temp/` folder
 
 ## 💡 Tips

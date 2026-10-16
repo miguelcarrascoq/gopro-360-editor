@@ -60,18 +60,16 @@ Go to [http://localhost:3000](http://localhost:3000)
    - Click **Browse** (or click the viewer) and choose the `.360` file with the mouse
    - Or click **Use system file dialog** to open the usual file picker
    - You can still paste a full path and click "Load file"
-
-4. **Generate a preview**:
-   - Click "Generate preview" (this can take a few minutes)
+   - The preview starts on its own. The viewer shows the progress percentage (this can take a few minutes)
    - When it is ready, you will see the interactive 360° video
    - **Drag with the mouse** to look around
    - Use the **▶** button to play or pause
 
-5. **Trim (optional)**:
+4. **Trim (optional)**:
    - Drag the **green** (start) and **red** (end) markers on the timeline
    - The selected segment duration updates in real time
 
-6. **Export**:
+5. **Export**:
    - Choose the quality you want:
      - **High**: Best quality, larger files, slower conversion (CRF 18)
      - **Medium**: Balance of quality and size (CRF 23, recommended)

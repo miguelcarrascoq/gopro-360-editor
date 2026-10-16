@@ -31,6 +31,7 @@ class GoPro360Editor {
         this.pitch = 0;
         this.roll = 0;
         this.ws = null;
+        this.activeJob = null;
 
         this.init();
         this.setupWebSocket();
@@ -79,7 +80,10 @@ class GoPro360Editor {
     setupEventListeners() {
         document.getElementById('load-btn').addEventListener('click', () => this.loadFile());
         document.getElementById('browse-btn').addEventListener('click', () => this.openFileBrowser());
-        document.getElementById('placeholder').addEventListener('click', () => this.openFileBrowser());
+        document.getElementById('placeholder').addEventListener('click', () => {
+            if (document.getElementById('placeholder').classList.contains('is-busy')) return;
+            this.openFileBrowser();
+        });
         document.getElementById('browser-close').addEventListener('click', () => this.closeFileBrowser());
         document.getElementById('browser-backdrop').addEventListener('click', () => this.closeFileBrowser());
         document.getElementById('browser-up').addEventListener('click', () => this.goUp());
@@ -90,7 +94,6 @@ class GoPro360Editor {
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') this.closeFileBrowser();
         });
-        document.getElementById('preview-btn').addEventListener('click', () => this.generatePreview());
         document.getElementById('export-btn').addEventListener('click', () => this.exportVideo());
         document.getElementById('play-pause').addEventListener('click', () => this.togglePlayback());
         this.setupViewControls();
@@ -475,8 +478,8 @@ class GoPro360Editor {
             this.endTime = data.duration;
 
             this.displayFileInfo(data);
-            document.getElementById('preview-btn').disabled = false;
             document.getElementById('file-info').style.display = 'block';
+            await this.generatePreview();
 
         } catch (err) {
             alert(`Error: ${err.message}`);
@@ -505,12 +508,41 @@ class GoPro360Editor {
         document.getElementById('file-info').innerHTML = html;
     }
 
-    async generatePreview() {
-        const progressDiv = document.getElementById('preview-progress');
-        progressDiv.style.display = 'block';
-        progressDiv.innerHTML = '<div class="progress-text">Generating preview...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
+    showPlaceholderProgress(progress, message) {
+        const placeholder = document.getElementById('placeholder');
+        placeholder.style.display = '';
+        placeholder.classList.add('is-busy');
 
-        document.getElementById('preview-btn').disabled = true;
+        const shown = progress < 10 ? (Math.round(progress * 10) / 10) : Math.round(progress);
+        const text = placeholder.querySelector('.progress-text');
+        const fill = placeholder.querySelector('.progress-fill');
+        if (text) text.textContent = `${message} (${shown}%)`;
+        if (fill) fill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+
+        document.getElementById('timeline-container').style.display = 'none';
+        document.getElementById('view-controls').hidden = true;
+        document.getElementById('export-btn').disabled = true;
+
+        if (this.video) {
+            this.video.pause();
+            this.isPlaying = false;
+        }
+    }
+
+    resetPlaceholder() {
+        const placeholder = document.getElementById('placeholder');
+        placeholder.classList.remove('is-busy');
+        placeholder.style.display = '';
+        const text = placeholder.querySelector('.progress-text');
+        const fill = placeholder.querySelector('.progress-fill');
+        if (text) text.textContent = 'Generating preview...';
+        if (fill) fill.style.width = '0%';
+    }
+
+    async generatePreview() {
+        this.activeJob = 'preview';
+        this.currentJobId = null;
+        this.showPlaceholderProgress(0, 'Generating preview...');
 
         try {
             const response = await fetch('/api/preview', {
@@ -529,8 +561,9 @@ class GoPro360Editor {
 
         } catch (err) {
             alert(`Error: ${err.message}`);
-            progressDiv.style.display = 'none';
-            document.getElementById('preview-btn').disabled = false;
+            this.activeJob = null;
+            this.currentJobId = null;
+            this.resetPlaceholder();
         }
     }
 
@@ -543,6 +576,8 @@ class GoPro360Editor {
         progressDiv.innerHTML = '<div class="progress-text">Exporting...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
 
         document.getElementById('export-btn').disabled = true;
+        this.activeJob = 'export';
+        this.currentJobId = null;
 
         try {
             const response = await fetch('/api/export', {
@@ -569,20 +604,33 @@ class GoPro360Editor {
             alert(`Error: ${err.message}`);
             progressDiv.style.display = 'none';
             document.getElementById('export-btn').disabled = false;
+            this.activeJob = null;
+            this.currentJobId = null;
         }
     }
 
     handleProgress(data) {
         const { jobId, progress, status, message } = data;
+        if (!this.currentJobId || jobId !== this.currentJobId) return;
 
-        let progressDiv;
-        
-        // Determine which progress div to update
-        if (document.getElementById('preview-progress').querySelector('.progress-text')?.textContent.includes('Generating')) {
-            progressDiv = document.getElementById('preview-progress');
-        } else {
-            progressDiv = document.getElementById('export-progress');
+        if (this.activeJob === 'preview') {
+            if (status === 'processing') {
+                this.showPlaceholderProgress(progress, message);
+            } else if (status === 'complete') {
+                this.activeJob = null;
+                this.loadPreview(jobId);
+            } else if (status === 'error') {
+                this.activeJob = null;
+                this.currentJobId = null;
+                this.resetPlaceholder();
+                alert(`Error: ${message}`);
+            }
+            return;
         }
+
+        if (this.activeJob !== 'export') return;
+
+        const progressDiv = document.getElementById('export-progress');
 
         if (status === 'processing') {
             const fill = progressDiv.querySelector('.progress-fill');
@@ -591,24 +639,18 @@ class GoPro360Editor {
             if (fill) fill.style.width = `${progress}%`;
             if (text) text.textContent = `${message} (${shown}%)`;
         } else if (status === 'complete') {
-            if (progressDiv === document.getElementById('preview-progress')) {
-                this.loadPreview(jobId);
-            } else {
-                progressDiv.innerHTML = '<div class="progress-text" style="color: #4ade80;">✓ Export complete. Check the temp/ folder</div>';
-                setTimeout(() => {
-                    progressDiv.style.display = 'none';
-                    document.getElementById('export-btn').disabled = false;
-                }, 3000);
-            }
+            this.activeJob = null;
+            progressDiv.innerHTML = '<div class="progress-text" style="color: #4ade80;">✓ Export complete. Check the temp/ folder</div>';
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+                document.getElementById('export-btn').disabled = false;
+            }, 3000);
         } else if (status === 'error') {
+            this.activeJob = null;
             progressDiv.innerHTML = `<div class="progress-text" style="color: #ef4444;">Error: ${message}</div>`;
             setTimeout(() => {
                 progressDiv.style.display = 'none';
-                if (progressDiv === document.getElementById('preview-progress')) {
-                    document.getElementById('preview-btn').disabled = false;
-                } else {
-                    document.getElementById('export-btn').disabled = false;
-                }
+                document.getElementById('export-btn').disabled = false;
             }, 5000);
         }
     }
@@ -625,15 +667,19 @@ class GoPro360Editor {
             const videoPath = previewMediaUrl(job.outputPath);
             this.setupVideoPlayer(videoPath);
 
-            document.getElementById('preview-progress').style.display = 'none';
             document.getElementById('export-btn').disabled = false;
             document.getElementById('timeline-container').style.display = 'block';
             document.getElementById('view-controls').hidden = false;
-            document.getElementById('placeholder').style.display = 'none';
+            const placeholder = document.getElementById('placeholder');
+            placeholder.classList.remove('is-busy');
+            placeholder.style.display = 'none';
 
             this.updateTimelineUI();
 
         } catch (err) {
+            if (document.getElementById('placeholder').classList.contains('is-busy')) {
+                this.resetPlaceholder();
+            }
             alert(`Error loading preview: ${err.message}`);
         }
     }
