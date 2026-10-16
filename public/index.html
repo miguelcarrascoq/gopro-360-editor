@@ -618,6 +618,40 @@
             font-size: 0.75rem;
         }
 
+        .browser-recent-label {
+            margin: 0;
+            color: #888;
+            font-size: 0.75rem;
+        }
+
+        .browser-recent-list {
+            max-height: 8.4rem;
+            overflow: auto;
+            background: #1a1a1a;
+            border-radius: 4px;
+            padding: 0.25rem;
+        }
+
+        .browser-recent-name {
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .browser-recent-folder {
+            flex: 1 1 8rem;
+            min-width: 0;
+            margin-left: auto;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: right;
+            color: #888;
+            font-size: 0.75rem;
+        }
+
         .browser-empty,
         .browser-status {
             padding: 1rem 0.75rem;
@@ -736,6 +770,10 @@
                 <button id="browser-close" class="icon-btn" type="button" aria-label="Close">×</button>
             </div>
             <div class="places" id="browser-places"></div>
+            <div id="browser-recent" class="browser-recent" hidden>
+                <p class="browser-recent-label">Recent</p>
+                <div id="browser-recent-list" class="browser-recent-list"></div>
+            </div>
             <div class="browser-nav">
                 <button id="browser-up" class="btn btn-secondary" type="button">Up</button>
                 <span id="browser-current"></span>

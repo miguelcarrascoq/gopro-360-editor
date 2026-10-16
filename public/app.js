@@ -9,6 +9,15 @@ function wrapDegrees(degrees) {
     return ((degrees + 180) % 360 + 360) % 360 - 180;
 }
 
+const RECENT_FILES_KEY = 'gopro-recent-files';
+const RECENT_FILES_LIMIT = 8;
+
+function folderFromFile(filePath) {
+    let folder = String(filePath).replace(/[\\/][^\\/]+$/, '');
+    if (/^[A-Za-z]:$/.test(folder)) folder += '\\';
+    return folder;
+}
+
 class GoPro360Editor {
     constructor() {
         this.currentFile = null;
@@ -326,10 +335,68 @@ class GoPro360Editor {
 
     openFileBrowser() {
         document.getElementById('file-browser').hidden = false;
+        this.renderRecent();
         const currentPath = document.getElementById('file-path').value.trim();
-        let folder = currentPath.replace(/[\\/][^\\/]+$/, '');
-        if (/^[A-Za-z]:$/.test(folder)) folder += '\\';
+        const folder = folderFromFile(currentPath);
         this.loadDirectory(folder || null, { fallbackToDefault: Boolean(folder) });
+    }
+
+    readRecentFiles() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || '[]');
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter((item) => typeof item === 'string' && item.trim()).slice(0, RECENT_FILES_LIMIT);
+        } catch {
+            return [];
+        }
+    }
+
+    rememberRecentFile(filePath) {
+        const path = String(filePath || '').trim();
+        if (!path) return;
+        const key = path.replace(/[\\/]/g, '\\').toLowerCase();
+        const recent = this.readRecentFiles().filter((item) => item.replace(/[\\/]/g, '\\').toLowerCase() !== key);
+        recent.unshift(path);
+        try {
+            localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recent.slice(0, RECENT_FILES_LIMIT)));
+        } catch {
+            // Storage can be unavailable; the current session still works.
+        }
+    }
+
+    renderRecent() {
+        const root = document.getElementById('browser-recent');
+        const list = document.getElementById('browser-recent-list');
+        const recent = this.readRecentFiles();
+        list.replaceChildren();
+        root.hidden = recent.length === 0;
+        if (!recent.length) return;
+
+        for (const filePath of recent) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'browser-item file';
+
+            const kind = document.createElement('span');
+            kind.className = 'browser-kind';
+            kind.textContent = '.360';
+
+            const name = document.createElement('span');
+            name.className = 'browser-recent-name';
+            name.textContent = filePath.split(/[\\/]/).pop();
+
+            const folder = document.createElement('span');
+            folder.className = 'browser-recent-folder';
+            const folderPath = folderFromFile(filePath);
+            folder.textContent = folderPath;
+            folder.title = folderPath;
+
+            button.append(kind, name, folder);
+            button.addEventListener('click', () => {
+                this.loadDirectory(folderPath || null, { fallbackToDefault: Boolean(folderPath) });
+            });
+            list.append(button);
+        }
     }
 
     closeFileBrowser() {
@@ -500,6 +567,7 @@ class GoPro360Editor {
             }
 
             this.currentFile = filePath;
+            this.rememberRecentFile(filePath);
             this.fileInfo = data;
             this.startTime = 0;
             this.endTime = data.duration;
