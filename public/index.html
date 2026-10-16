@@ -678,6 +678,11 @@
             color: #fff;
         }
 
+        .place-btn.sample {
+            color: #8ec2ff;
+            border-color: #4a9eff;
+        }
+
         .browser-item:hover {
             background: #333;
             color: #fff;
@@ -764,6 +769,18 @@
             padding: 0.25rem;
         }
 
+        .browser-recent-row {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .browser-recent-row > .browser-item {
+            width: auto;
+            flex: 0 1 auto;
+            min-width: 0;
+        }
+
         .browser-recent-name {
             flex: 0 1 auto;
             min-width: 0;
@@ -775,50 +792,29 @@
         .browser-recent-folder {
             flex: 1 1 8rem;
             min-width: 0;
-            margin-left: auto;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             text-align: right;
             color: #888;
             font-size: 0.75rem;
+            font-family: inherit;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            padding: 0.45rem 0.6rem;
+            cursor: pointer;
+        }
+
+        .browser-recent-folder:hover {
+            background: #333;
+            color: #fff;
         }
 
         .browser-recent-list .browser-size {
             margin-left: 0.75rem;
             min-width: 4.5rem;
             text-align: right;
-        }
-
-        .browser-sample {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            background: #1a1a1a;
-            border-radius: 4px;
-            padding: 0.15rem 0.25rem 0.15rem 0.7rem;
-        }
-
-        .browser-sample .browser-recent-label {
-            flex: none;
-            min-width: 3.4rem;
-        }
-
-        .browser-sample .browser-recent-list {
-            flex: 1;
-            max-height: none;
-            overflow: visible;
-            padding: 0;
-            background: transparent;
-        }
-
-        .browser-sample .browser-item {
-            padding: 0.25rem 0.45rem;
-            background: transparent;
-        }
-
-        .browser-sample .browser-item:hover {
-            background: #333;
         }
 
         .browser-empty,
@@ -992,10 +988,6 @@
             <div id="browser-recent" class="browser-recent" hidden>
                 <p class="browser-recent-label">Recent</p>
                 <div id="browser-recent-list" class="browser-recent-list"></div>
-            </div>
-            <div id="browser-sample" class="browser-sample" hidden>
-                <p class="browser-recent-label">Sample</p>
-                <div id="browser-sample-list" class="browser-recent-list"></div>
             </div>
             <div class="browser-nav">
                 <button id="browser-up" class="btn btn-secondary" type="button">Up</button>

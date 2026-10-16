@@ -461,9 +461,15 @@ class GoPro360Editor {
         if (!recent.length) return;
 
         for (const filePath of recent) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'browser-item file';
+            const fileName = filePath.split(/[\\/]/).pop();
+            const folderPath = folderFromFile(filePath);
+            const row = document.createElement('div');
+            row.className = 'browser-recent-row';
+
+            const fileButton = document.createElement('button');
+            fileButton.type = 'button';
+            fileButton.className = 'browser-item file';
+            fileButton.setAttribute('aria-label', `Open ${fileName}`);
 
             const kind = document.createElement('span');
             kind.className = 'browser-kind';
@@ -471,23 +477,27 @@ class GoPro360Editor {
 
             const name = document.createElement('span');
             name.className = 'browser-recent-name';
-            name.textContent = filePath.split(/[\\/]/).pop();
-
-            const folder = document.createElement('span');
-            folder.className = 'browser-recent-folder';
-            const folderPath = folderFromFile(filePath);
-            folder.textContent = folderPath;
-            folder.title = folderPath;
+            name.textContent = fileName;
 
             const size = document.createElement('span');
             size.className = 'browser-size';
             size.dataset.path = filePath;
 
-            button.append(kind, name, folder, size);
-            button.addEventListener('click', () => {
+            fileButton.append(kind, name, size);
+            fileButton.addEventListener('click', () => this.chooseFile(filePath));
+
+            const folderButton = document.createElement('button');
+            folderButton.type = 'button';
+            folderButton.className = 'browser-recent-folder';
+            folderButton.textContent = folderPath;
+            folderButton.title = folderPath;
+            folderButton.setAttribute('aria-label', `Open folder ${folderPath}`);
+            folderButton.addEventListener('click', () => {
                 this.loadDirectory(folderPath || null, { fallbackToDefault: Boolean(folderPath) });
             });
-            list.append(button);
+
+            row.append(fileButton, folderButton);
+            list.append(row);
         }
 
         this.fillRecentSizes(recent);
@@ -597,41 +607,7 @@ class GoPro360Editor {
         }
     }
 
-    renderSample(sample) {
-        const root = document.getElementById('browser-sample');
-        const list = document.getElementById('browser-sample-list');
-        list.replaceChildren();
-        if (!sample?.path) {
-            root.hidden = true;
-            return;
-        }
-
-        root.hidden = false;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'browser-item file';
-
-        const kind = document.createElement('span');
-        kind.className = 'browser-kind';
-        kind.textContent = '.360';
-
-        const name = document.createElement('span');
-        name.className = 'browser-name';
-        name.textContent = sample.name || 'example.360';
-
-        button.append(kind, name);
-        if (Number.isFinite(sample.size)) {
-            const size = document.createElement('span');
-            size.className = 'browser-size';
-            size.textContent = formatFileSize(sample.size);
-            button.append(size);
-        }
-        button.addEventListener('click', () => this.chooseFile(sample.path));
-        list.append(button);
-    }
-
     renderBrowser(data) {
-        this.renderSample(data.sample);
         this.browserUpTarget = data.canGoUp ? data.upTarget : null;
         document.getElementById('browser-up').disabled = !data.canGoUp;
 
@@ -649,6 +625,19 @@ class GoPro360Editor {
             if (!data.atComputer && place.path === data.path) button.classList.add('active');
             button.addEventListener('click', () => this.loadDirectory(place.path));
             places.append(button);
+        }
+
+        const sample = data.sample;
+        if (sample?.path) {
+            const sampleButton = document.createElement('button');
+            sampleButton.type = 'button';
+            sampleButton.className = 'place-btn sample';
+            sampleButton.textContent = 'Sample';
+            const sampleName = sample.name || 'example.360';
+            const sampleSize = Number.isFinite(sample.size) ? ` · ${formatFileSize(sample.size)}` : '';
+            sampleButton.title = `${sampleName}${sampleSize}`;
+            sampleButton.addEventListener('click', () => this.chooseFile(sample.path));
+            places.append(sampleButton);
         }
 
         const list = document.getElementById('browser-list');
