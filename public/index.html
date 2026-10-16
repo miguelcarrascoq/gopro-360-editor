@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoPro 360 Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background: #2a2a2a;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        #main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #viewer-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+
+        #viewer {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #controls-panel {
+            width: 350px;
+            background: #2a2a2a;
+            padding: 1.5rem;
+            overflow-y: auto;
+            border-left: 1px solid #3a3a3a;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #4a9eff;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: #4a9eff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #3a8eef;
+        }
+
+        .btn:disabled {
+            background: #3a3a3a;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #3a3a3a;
+        }
+
+        .btn-secondary:hover {
+            background: #4a4a4a;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .file-info {
+            background: #1a1a1a;
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .file-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-info-label {
+            color: #888;
+        }
+
+        #timeline-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(42, 42, 42, 0.95);
+            padding: 1rem;
+            border-top: 1px solid #3a3a3a;
+            display: none;
+        }
+
+        #timeline {
+            position: relative;
+            height: 80px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #4a9eff;
+            cursor: ew-resize;
+        }
+
+        #start-marker {
+            left: 0;
+            background: #4ade80;
+        }
+
+        #end-marker {
+            right: 0;
+            background: #ef4444;
+        }
+
+        .timeline-selection {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: rgba(74, 158, 255, 0.2);
+            border-left: 2px solid #4ade80;
+            border-right: 2px solid #ef4444;
+            pointer-events: none;
+        }
+
+        #playback-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        #play-pause {
+            width: 60px;
+            padding: 0.5rem;
+        }
+
+        #current-time {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .progress {
+            background: #1a1a1a;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #3a3a3a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4a9eff;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1a1a1a;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .instructions {
+            background: #2a2a2a;
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #888;
+            margin-bottom: 1rem;
+        }
+
+        .instructions strong {
+            color: #fff;
+        }
+
+        #placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            color: #666;
+        }
+
+        #placeholder svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <header>
+            <h1>🎥 GoPro 360 Editor</h1>
+        </header>
+
+        <div id="main">
+            <div id="viewer-container">
+                <canvas id="viewer"></canvas>
+                <div id="placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <p>Carga un archivo .360 para comenzar</p>
+                </div>
+
+                <div id="timeline-container">
+                    <div id="timeline">
+                        <div class="timeline-selection"></div>
+                        <div id="start-marker" class="timeline-marker"></div>
+                        <div id="end-marker" class="timeline-marker"></div>
+                    </div>
+                    <div id="playback-controls">
+                        <button id="play-pause" class="btn btn-secondary">▶</button>
+                        <span id="current-time">0:00 / 0:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="controls-panel">
+                <div class="section">
+                    <h2>1. Cargar archivo</h2>
+                    <div class="instructions">
+                        <strong>Pega la ruta completa</strong> de tu archivo .360 de GoPro MAX
+                    </div>
+                    <input type="text" id="file-path" placeholder="/ruta/a/archivo.360">
+                    <button id="load-btn" class="btn">Cargar archivo</button>
+                    <div id="file-info" class="file-info" style="display: none; margin-top: 1rem;"></div>
+                </div>
+
+                <div class="section">
+                    <h2>2. Generar vista previa</h2>
+                    <button id="preview-btn" class="btn" disabled>Generar vista previa</button>
+                    <div id="preview-progress" class="progress"></div>
+                </div>
+
+                <div class="section">
+                    <h2>3. Recortar (opcional)</h2>
+                    <div class="instructions">
+                        Arrastra los marcadores <span style="color: #4ade80;">verde</span> (inicio) y <span style="color: #ef4444;">rojo</span> (fin) en la línea de tiempo
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Inicio:</span>
+                        <span id="trim-start">0:00</span>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Fin:</span>
+                        <span id="trim-end">0:00</span>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Duración:</span>
+                        <span id="trim-duration">0:00</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>4. Exportar</h2>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Calidad:</label>
+                    <select id="quality">
+                        <option value="high">Alta (CRF 18, lento)</option>
+                        <option value="medium" selected>Media (CRF 23, normal)</option>
+                        <option value="low">Baja (CRF 28, rápido)</option>
+                    </select>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Nombre del archivo:</label>
+                    <input type="text" id="output-name" placeholder="mi_video_360">
+                    <button id="export-btn" class="btn" disabled>Exportar MP4</button>
+                    <div id="export-progress" class="progress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.159.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
