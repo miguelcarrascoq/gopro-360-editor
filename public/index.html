@@ -25,14 +25,69 @@
         }
 
         header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
             background: #2a2a2a;
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.25rem;
             border-bottom: 1px solid #3a3a3a;
         }
 
         h1 {
-            font-size: 1.5rem;
+            flex: none;
+            font-size: 1.15rem;
             font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-left: auto;
+            flex: none;
+        }
+
+        .header-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .header-icon.is-exporting {
+            background: #4a9eff;
+        }
+
+        .export-menu {
+            position: relative;
+        }
+
+        .export-popover {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            z-index: 15;
+            width: 280px;
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 0.9rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+
+        .export-popover[hidden] {
+            display: none;
+        }
+
+        .export-popover label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            color: #bbb;
         }
 
         #main {
@@ -51,29 +106,6 @@
             width: 100%;
             height: 100%;
             display: block;
-        }
-
-        #controls-panel {
-            width: 350px;
-            background: #2a2a2a;
-            padding: 1rem;
-            overflow-y: auto;
-            border-left: 1px solid #3a3a3a;
-        }
-
-        .section {
-            margin-bottom: 1.25rem;
-        }
-
-        .section:last-child {
-            margin-bottom: 0;
-        }
-
-        .section h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            color: #4a9eff;
         }
 
         .btn {
@@ -123,22 +155,18 @@
             border-color: #4a9eff;
         }
 
-        .file-info {
-            background: #1a1a1a;
-            padding: 1rem;
-            border-radius: 4px;
+        #file-info {
+            flex: 1;
+            min-width: 0;
             font-size: 0.85rem;
-            line-height: 1.6;
+            color: #bbb;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .file-info-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-        }
-
-        .file-info-label {
-            color: #888;
+        #file-info[hidden] {
+            display: none;
         }
 
         #timeline-container {
@@ -154,7 +182,7 @@
 
         #timeline {
             position: relative;
-            height: 80px;
+            height: 56px;
             background: #1a1a1a;
             border-radius: 4px;
             margin-bottom: 1rem;
@@ -286,20 +314,6 @@
             color: #fff;
             font-size: 0.9rem;
             margin-bottom: 1rem;
-        }
-
-        .instructions {
-            background: #2a2a2a;
-            padding: 1rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            color: #888;
-            margin-bottom: 1rem;
-        }
-
-        .instructions strong {
-            color: #fff;
         }
 
         #placeholder {
@@ -449,14 +463,21 @@
             font-size: 0.8rem;
         }
 
-        .btn-row {
+        .browser-path {
             display: flex;
             gap: 0.5rem;
+            align-items: center;
         }
 
-        .btn-row .btn {
-            width: auto;
+        .browser-path input[type="text"] {
             flex: 1;
+            width: auto;
+            margin-bottom: 0;
+        }
+
+        .browser-path .btn {
+            width: auto;
+            flex: none;
         }
 
         .modal:not([hidden]) {
@@ -618,6 +639,33 @@
     <div id="container">
         <header>
             <h1>🎥 GoPro 360 Editor</h1>
+            <div id="file-info" hidden></div>
+            <div class="header-actions">
+                <button id="open-btn" class="icon-btn header-icon" type="button" aria-label="Open file" title="Open file">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                </button>
+                <div class="export-menu">
+                    <button id="export-menu-btn" class="icon-btn header-icon" type="button" aria-label="Export" title="Export" aria-expanded="false" aria-controls="export-popover">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                        </svg>
+                    </button>
+                    <div id="export-popover" class="export-popover" hidden>
+                        <label for="quality">Quality</label>
+                        <select id="quality">
+                            <option value="high">High (CRF 18, slow)</option>
+                            <option value="medium" selected>Medium (CRF 23, normal)</option>
+                            <option value="low">Low (CRF 28, fast)</option>
+                        </select>
+                        <label for="output-name">File name</label>
+                        <input type="text" id="output-name" placeholder="my_360_video">
+                        <button id="export-btn" class="btn" type="button" disabled>Export MP4</button>
+                        <div id="export-progress" class="progress"></div>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div id="main">
@@ -677,35 +725,6 @@
                     </div>
                 </div>
             </div>
-
-            <div id="controls-panel">
-                <div class="section">
-                    <h2>1. Load file</h2>
-                    <div class="instructions">
-                        Click <strong>Browse</strong> and choose the .360 file with the mouse, or paste its full path.
-                    </div>
-                    <input type="text" id="file-path" placeholder="C:\Videos\GS010001.360">
-                    <div class="btn-row">
-                        <button id="browse-btn" class="btn btn-secondary" type="button">Browse</button>
-                        <button id="load-btn" class="btn" type="button">Load file</button>
-                    </div>
-                    <div id="file-info" class="file-info" style="display: none; margin-top: 1rem;"></div>
-                </div>
-
-                <div class="section">
-                    <h2>2. Export</h2>
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Quality:</label>
-                    <select id="quality">
-                        <option value="high">High (CRF 18, slow)</option>
-                        <option value="medium" selected>Medium (CRF 23, normal)</option>
-                        <option value="low">Low (CRF 28, fast)</option>
-                    </select>
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">File name:</label>
-                    <input type="text" id="output-name" placeholder="my_360_video">
-                    <button id="export-btn" class="btn" disabled>Export MP4</button>
-                    <div id="export-progress" class="progress"></div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -722,7 +741,11 @@
                 <span id="browser-current"></span>
             </div>
             <div id="browser-list" class="browser-list"></div>
-            <p class="modal-hint">Click a folder to open it. Click a .360 file to load it.</p>
+            <p class="modal-hint">Click a folder to open it. Click a .360 file to load it, or paste a full path.</p>
+            <div class="browser-path">
+                <input type="text" id="file-path" placeholder="C:\Videos\GS010001.360">
+                <button id="load-btn" class="btn" type="button">Load file</button>
+            </div>
             <button id="system-dialog-btn" class="btn btn-secondary" type="button">Use system file dialog</button>
         </div>
     </div>

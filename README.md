@@ -57,7 +57,7 @@ npm start
 Go to [http://localhost:3000](http://localhost:3000)
 
 3. **Load a file**:
-   - Click **Browse** (or click the viewer) and choose the `.360` file with the mouse
+   - Click the folder icon in the header (or click the viewer) and choose the `.360` file with the mouse
    - Or click **Use system file dialog** to open the usual file picker
    - You can still paste a full path and click "Load file"
    - The preview starts on its own. The viewer shows the progress percentage (this can take a few minutes)
@@ -70,6 +70,7 @@ Go to [http://localhost:3000](http://localhost:3000)
    - The selected segment duration updates in real time
 
 5. **Export**:
+   - Click the download icon in the header
    - Choose the quality you want:
      - **High**: Best quality, larger files, slower conversion (CRF 18)
      - **Medium**: Balance of quality and size (CRF 23, recommended)

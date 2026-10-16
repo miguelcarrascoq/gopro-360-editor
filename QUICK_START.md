@@ -20,17 +20,18 @@ Go to [http://localhost:3000](http://localhost:3000)
 
 ## 🎬 Typical workflow
 
-1. **Paste the path** to your `.360` file in the text field
+1. **Open a file** — click the folder icon in the header (or click the viewer)
+   - Choose the `.360` file with the mouse, or paste its full path and click "Load file"
    - Example: `/Users/your-name/GoPro/GS010001.360`
-   
-2. **Load the file** — click "Load file"
+
+2. **Wait for the preview**
    - The preview starts on its own. The viewer shows the progress percentage
    - Wait 2–5 minutes depending on the file size
    - The preview lets you explore the 360° video by dragging with the mouse
 
 3. **Trim (optional)** — drag the green and red markers
 
-4. **Export** — choose a quality and click "Export MP4"
+4. **Export** — click the download icon in the header, choose a quality, and click "Export MP4"
    - The file is saved in the `temp/` folder
 
 ## 💡 Tips

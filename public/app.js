@@ -79,7 +79,7 @@ class GoPro360Editor {
 
     setupEventListeners() {
         document.getElementById('load-btn').addEventListener('click', () => this.loadFile());
-        document.getElementById('browse-btn').addEventListener('click', () => this.openFileBrowser());
+        document.getElementById('open-btn').addEventListener('click', () => this.openFileBrowser());
         document.getElementById('placeholder').addEventListener('click', () => {
             if (document.getElementById('placeholder').classList.contains('is-busy')) return;
             this.openFileBrowser();
@@ -91,8 +91,17 @@ class GoPro360Editor {
         document.getElementById('file-path').addEventListener('keydown', (event) => {
             if (event.key === 'Enter') this.loadFile();
         });
+        document.getElementById('export-menu-btn').addEventListener('click', () => this.toggleExportMenu());
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.export-menu')) this.closeExportMenu();
+        });
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') this.closeFileBrowser();
+            if (event.key !== 'Escape') return;
+            if (!document.getElementById('file-browser').hidden) {
+                this.closeFileBrowser();
+                return;
+            }
+            this.closeExportMenu();
         });
         document.getElementById('export-btn').addEventListener('click', () => this.exportVideo());
         document.getElementById('play-pause').addEventListener('click', () => this.togglePlayback());
@@ -327,6 +336,24 @@ class GoPro360Editor {
         document.getElementById('file-browser').hidden = true;
     }
 
+    toggleExportMenu() {
+        const popover = document.getElementById('export-popover');
+        const open = popover.hidden;
+        popover.hidden = !open;
+        document.getElementById('export-menu-btn').setAttribute('aria-expanded', String(open));
+    }
+
+    closeExportMenu() {
+        const popover = document.getElementById('export-popover');
+        if (popover.hidden) return;
+        popover.hidden = true;
+        document.getElementById('export-menu-btn').setAttribute('aria-expanded', 'false');
+    }
+
+    setExporting(active) {
+        document.getElementById('export-menu-btn').classList.toggle('is-exporting', active);
+    }
+
     async readJson(response) {
         const text = await response.text();
         try {
@@ -478,7 +505,7 @@ class GoPro360Editor {
             this.endTime = data.duration;
 
             this.displayFileInfo(data);
-            document.getElementById('file-info').style.display = 'block';
+            this.closeFileBrowser();
             await this.generatePreview();
 
         } catch (err) {
@@ -487,25 +514,11 @@ class GoPro360Editor {
     }
 
     displayFileInfo(info) {
-        const html = `
-            <div class="file-info-item">
-                <span class="file-info-label">Duration:</span>
-                <span>${this.formatTime(info.duration)}</span>
-            </div>
-            <div class="file-info-item">
-                <span class="file-info-label">Video streams:</span>
-                <span>${info.videoStreams.length}</span>
-            </div>
-            <div class="file-info-item">
-                <span class="file-info-label">Resolution:</span>
-                <span>${info.videoStreams[0].width}x${info.videoStreams[0].height}</span>
-            </div>
-            <div class="file-info-item">
-                <span class="file-info-label">Audio:</span>
-                <span>${info.audioStreams.length > 0 ? 'Yes' : 'No'}</span>
-            </div>
-        `;
-        document.getElementById('file-info').innerHTML = html;
+        const audio = info.audioStreams.length > 0 ? 'Audio' : 'No audio';
+        const stream = info.videoStreams[0];
+        const infoEl = document.getElementById('file-info');
+        infoEl.textContent = `${this.formatTime(info.duration)} · ${stream.width}×${stream.height} · ${info.videoStreams.length} streams · ${audio}`;
+        infoEl.hidden = false;
     }
 
     showPlaceholderProgress(progress, message) {
@@ -576,6 +589,7 @@ class GoPro360Editor {
         progressDiv.innerHTML = '<div class="progress-text">Exporting...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
 
         document.getElementById('export-btn').disabled = true;
+        this.setExporting(true);
         this.activeJob = 'export';
         this.currentJobId = null;
 
@@ -604,6 +618,7 @@ class GoPro360Editor {
             alert(`Error: ${err.message}`);
             progressDiv.style.display = 'none';
             document.getElementById('export-btn').disabled = false;
+            this.setExporting(false);
             this.activeJob = null;
             this.currentJobId = null;
         }
@@ -641,12 +656,14 @@ class GoPro360Editor {
         } else if (status === 'complete') {
             this.activeJob = null;
             progressDiv.innerHTML = '<div class="progress-text" style="color: #4ade80;">✓ Export complete. Check the temp/ folder</div>';
+            this.setExporting(false);
             setTimeout(() => {
                 progressDiv.style.display = 'none';
                 document.getElementById('export-btn').disabled = false;
             }, 3000);
         } else if (status === 'error') {
             this.activeJob = null;
+            this.setExporting(false);
             progressDiv.innerHTML = `<div class="progress-text" style="color: #ef4444;">Error: ${message}</div>`;
             setTimeout(() => {
                 progressDiv.style.display = 'none';
