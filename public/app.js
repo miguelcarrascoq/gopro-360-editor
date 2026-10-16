@@ -21,6 +21,19 @@ function folderFromFile(filePath) {
     return folder;
 }
 
+function formatFileSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return '';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit += 1;
+    }
+    const digits = unit === 0 || value >= 10 ? 0 : 1;
+    return `${value.toFixed(digits)} ${units[unit]}`;
+}
+
 class GoPro360Editor {
     constructor() {
         this.currentFile = null;
@@ -557,9 +570,16 @@ class GoPro360Editor {
             kind.textContent = entry.kind === 'file' ? '.360' : 'Folder';
 
             const name = document.createElement('span');
+            name.className = 'browser-name';
             name.textContent = entry.name;
 
             button.append(kind, name);
+            if (entry.kind === 'file' && Number.isFinite(entry.size)) {
+                const size = document.createElement('span');
+                size.className = 'browser-size';
+                size.textContent = formatFileSize(entry.size);
+                button.append(size);
+            }
             button.addEventListener('click', () => {
                 if (entry.kind === 'dir') this.loadDirectory(entry.path);
                 else this.chooseFile(entry.path);

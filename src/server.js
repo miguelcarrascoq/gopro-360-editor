@@ -136,15 +136,25 @@ async function listDirectory(dirPath) {
   }
 
   const entries = [];
+  const files = [];
   for (const entry of dirents) {
     if (entry.name.startsWith('.')) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       entries.push({ name: entry.name, path: full, kind: 'dir' });
     } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.360')) {
-      entries.push({ name: entry.name, path: full, kind: 'file' });
+      files.push({ name: entry.name, path: full, kind: 'file' });
     }
   }
+
+  await Promise.all(files.map(async (file) => {
+    try {
+      file.size = (await stat(file.path)).size;
+    } catch {
+      file.size = null;
+    }
+  }));
+  entries.push(...files);
 
   entries.sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1;
