@@ -56,19 +56,23 @@
         #controls-panel {
             width: 350px;
             background: #2a2a2a;
-            padding: 1.5rem;
+            padding: 1rem;
             overflow-y: auto;
             border-left: 1px solid #3a3a3a;
         }
 
         .section {
-            margin-bottom: 2rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
         }
 
         .section h2 {
             font-size: 1rem;
             font-weight: 600;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             color: #4a9eff;
         }
 
@@ -213,6 +217,26 @@
             display: flex;
             gap: 1rem;
             align-items: center;
+        }
+
+        #trim-info {
+            display: flex;
+            gap: 1.25rem;
+            margin-top: 0.6rem;
+            font-size: 0.85rem;
+        }
+
+        #trim-info .trim-label {
+            color: #888;
+            margin-right: 0.35rem;
+        }
+
+        #trim-info .trim-start-label {
+            color: #4ade80;
+        }
+
+        #trim-info .trim-end-label {
+            color: #ef4444;
         }
 
         #play-pause {
@@ -646,6 +670,11 @@
                         <button id="play-pause" class="btn btn-secondary">▶</button>
                         <span id="current-time">0:00 / 0:00</span>
                     </div>
+                    <div id="trim-info">
+                        <span><span class="trim-label trim-start-label">Start</span><span id="trim-start">0:00</span></span>
+                        <span><span class="trim-label trim-end-label">End</span><span id="trim-end">0:00</span></span>
+                        <span><span class="trim-label">Duration</span><span id="trim-duration">0:00</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -664,27 +693,7 @@
                 </div>
 
                 <div class="section">
-                    <h2>2. Trim (optional)</h2>
-                    <div class="instructions">
-                        Drag the <span style="color: #4ade80;">green</span> (start) and <span style="color: #ef4444;">red</span> (end) markers on the timeline.
-                        The <span style="color: #fff;">white</span> bar is the playback position: drag it, or click the timeline, to move the preview.
-                    </div>
-                    <div class="file-info-item">
-                        <span class="file-info-label">Start:</span>
-                        <span id="trim-start">0:00</span>
-                    </div>
-                    <div class="file-info-item">
-                        <span class="file-info-label">End:</span>
-                        <span id="trim-end">0:00</span>
-                    </div>
-                    <div class="file-info-item">
-                        <span class="file-info-label">Duration:</span>
-                        <span id="trim-duration">0:00</span>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>3. Export</h2>
+                    <h2>2. Export</h2>
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Quality:</label>
                     <select id="quality">
                         <option value="high">High (CRF 18, slow)</option>
