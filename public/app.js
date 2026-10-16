@@ -61,6 +61,18 @@ class GoPro360Editor {
 
     setupEventListeners() {
         document.getElementById('load-btn').addEventListener('click', () => this.loadFile());
+        document.getElementById('browse-btn').addEventListener('click', () => this.openFileBrowser());
+        document.getElementById('placeholder').addEventListener('click', () => this.openFileBrowser());
+        document.getElementById('browser-close').addEventListener('click', () => this.closeFileBrowser());
+        document.getElementById('browser-backdrop').addEventListener('click', () => this.closeFileBrowser());
+        document.getElementById('browser-up').addEventListener('click', () => this.goUp());
+        document.getElementById('system-dialog-btn').addEventListener('click', () => this.pickWithSystemDialog());
+        document.getElementById('file-path').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') this.loadFile();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') this.closeFileBrowser();
+        });
         document.getElementById('preview-btn').addEventListener('click', () => this.generatePreview());
         document.getElementById('export-btn').addEventListener('click', () => this.exportVideo());
         document.getElementById('play-pause').addEventListener('click', () => this.togglePlayback());
@@ -131,6 +143,147 @@ class GoPro360Editor {
 
     onMouseUp() {
         this.isDragging = false;
+    }
+
+    openFileBrowser() {
+        document.getElementById('file-browser').hidden = false;
+        const currentPath = document.getElementById('file-path').value.trim();
+        let folder = currentPath.replace(/[\\/][^\\/]+$/, '');
+        if (/^[A-Za-z]:$/.test(folder)) folder += '\\';
+        this.loadDirectory(folder || null, { fallbackToDefault: Boolean(folder) });
+    }
+
+    closeFileBrowser() {
+        document.getElementById('file-browser').hidden = true;
+    }
+
+    async readJson(response) {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch {
+            const plain = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (/Cannot (GET|POST|PUT|DELETE)/.test(plain)) {
+                throw new Error('Restart the server (stop it, then run npm start) and try again.');
+            }
+            throw new Error(plain || `Unexpected server response (${response.status})`);
+        }
+    }
+
+    async loadDirectory(dirPath, { atComputer = false, fallbackToDefault = false } = {}) {
+        const requestId = (this.browserRequest || 0) + 1;
+        this.browserRequest = requestId;
+
+        const list = document.getElementById('browser-list');
+        list.replaceChildren();
+        const status = document.createElement('div');
+        status.className = 'browser-status';
+        status.textContent = 'Opening folder...';
+        list.append(status);
+
+        const url = atComputer
+            ? '/api/fs?view=computer'
+            : `/api/fs${dirPath ? `?path=${encodeURIComponent(dirPath)}` : ''}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await this.readJson(response);
+            if (requestId !== this.browserRequest) return;
+            if (!response.ok) throw new Error(data.error || 'Could not open folder');
+            this.renderBrowser(data);
+        } catch (err) {
+            if (requestId !== this.browserRequest) return;
+            if (fallbackToDefault && dirPath) {
+                await this.loadDirectory(null);
+                return;
+            }
+            list.replaceChildren();
+            const error = document.createElement('div');
+            error.className = 'browser-status error';
+            error.textContent = err.message;
+            list.append(error);
+        }
+    }
+
+    renderBrowser(data) {
+        this.browserUpTarget = data.canGoUp ? data.upTarget : null;
+        document.getElementById('browser-up').disabled = !data.canGoUp;
+
+        const current = document.getElementById('browser-current');
+        current.textContent = data.atComputer ? 'This PC' : data.path;
+        current.title = current.textContent;
+
+        const places = document.getElementById('browser-places');
+        places.replaceChildren();
+        for (const place of data.places || []) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'place-btn';
+            button.textContent = place.name;
+            if (!data.atComputer && place.path === data.path) button.classList.add('active');
+            button.addEventListener('click', () => this.loadDirectory(place.path));
+            places.append(button);
+        }
+
+        const list = document.getElementById('browser-list');
+        list.replaceChildren();
+        if (!data.entries?.length) {
+            const empty = document.createElement('div');
+            empty.className = 'browser-empty';
+            empty.textContent = 'This folder has no subfolders or .360 files.';
+            list.append(empty);
+            return;
+        }
+
+        for (const entry of data.entries) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `browser-item${entry.kind === 'file' ? ' file' : ''}`;
+
+            const kind = document.createElement('span');
+            kind.className = 'browser-kind';
+            kind.textContent = entry.kind === 'file' ? '.360' : 'Folder';
+
+            const name = document.createElement('span');
+            name.textContent = entry.name;
+
+            button.append(kind, name);
+            button.addEventListener('click', () => {
+                if (entry.kind === 'dir') this.loadDirectory(entry.path);
+                else this.chooseFile(entry.path);
+            });
+            list.append(button);
+        }
+    }
+
+    goUp() {
+        if (!this.browserUpTarget) return;
+        if (this.browserUpTarget === 'computer') this.loadDirectory(null, { atComputer: true });
+        else this.loadDirectory(this.browserUpTarget);
+    }
+
+    async chooseFile(filePath) {
+        document.getElementById('file-path').value = filePath;
+        this.closeFileBrowser();
+        await this.loadFile();
+    }
+
+    async pickWithSystemDialog() {
+        const button = document.getElementById('system-dialog-btn');
+        button.disabled = true;
+        button.textContent = 'Waiting for the file dialog...';
+
+        try {
+            const response = await fetch('/api/pick-file', { method: 'POST' });
+            const data = await this.readJson(response);
+            if (!response.ok) throw new Error(data.error || 'Could not open the file dialog');
+            if (!data.cancelled && data.path) await this.chooseFile(data.path);
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Use system file dialog';
+        }
     }
 
     async loadFile() {

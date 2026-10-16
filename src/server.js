@@ -1,9 +1,12 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
+import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { mkdir, access, readdir, unlink } from 'fs/promises';
+import { dirname, join, resolve } from 'path';
+import { mkdir, access, readdir, readFile, unlink, stat } from 'fs/promises';
+import { homedir, tmpdir } from 'os';
 import { GoProProcessor } from './gopro-processor.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +48,277 @@ function broadcastProgress(jobId, progress, status, message) {
     }
   });
 }
+
+async function directoryIfExists(dirPath) {
+  try {
+    const info = await stat(dirPath);
+    return info.isDirectory() ? dirPath : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getQuickPlaces() {
+  const home = homedir();
+  const candidates = [
+    ['Home', home],
+    ['Desktop', join(home, 'Desktop')],
+    ['Desktop', join(home, 'Escritorio')],
+    ['Documents', join(home, 'Documents')],
+    ['Documents', join(home, 'Documentos')],
+    ['Downloads', join(home, 'Downloads')],
+    ['Downloads', join(home, 'Descargas')],
+    ['Videos', join(home, 'Videos')],
+    ['Videos', join(home, 'Vídeos')],
+    ['OneDrive Videos', join(home, 'OneDrive', 'Videos')],
+    ['OneDrive Desktop', join(home, 'OneDrive', 'Desktop')],
+  ];
+  const seen = new Set();
+  const places = [];
+
+  for (const [name, candidate] of candidates) {
+    const dir = await directoryIfExists(candidate);
+    if (!dir) continue;
+    const key = resolve(dir).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    places.push({ name, path: dir });
+  }
+
+  return places;
+}
+
+async function listDrives() {
+  if (process.platform !== 'win32') {
+    return [{ name: '/', path: '/' }];
+  }
+
+  const drives = [];
+  for (let code = 65; code <= 90; code++) {
+    const drivePath = `${String.fromCharCode(code)}:\\`;
+    if (await directoryIfExists(drivePath)) {
+      drives.push({ name: drivePath, path: drivePath });
+    }
+  }
+  return drives;
+}
+
+function browseNavigation(dirPath) {
+  const parent = dirname(dirPath);
+  if (parent !== dirPath) {
+    return { canGoUp: true, upTarget: parent };
+  }
+  if (process.platform === 'win32') {
+    return { canGoUp: true, upTarget: 'computer' };
+  }
+  return { canGoUp: false, upTarget: null };
+}
+
+async function listDirectory(dirPath) {
+  const dir = resolve(dirPath);
+  const info = await stat(dir);
+  if (!info.isDirectory()) {
+    const error = new Error('Not a folder');
+    error.status = 400;
+    throw error;
+  }
+
+  let dirents;
+  try {
+    dirents = await readdir(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'EACCES') {
+      const error = new Error('Cannot open this folder');
+      error.status = 403;
+      throw error;
+    }
+    throw err;
+  }
+
+  const entries = [];
+  for (const entry of dirents) {
+    if (entry.name.startsWith('.')) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      entries.push({ name: entry.name, path: full, kind: 'dir' });
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.360')) {
+      entries.push({ name: entry.name, path: full, kind: 'file' });
+    }
+  }
+
+  entries.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  return {
+    path: dir,
+    ...browseNavigation(dir),
+    entries,
+  };
+}
+
+async function defaultBrowsePath(places) {
+  const videos = places.find((place) => place.name === 'Videos' || place.name === 'OneDrive Videos');
+  if (videos) return videos.path;
+  return places.find((place) => place.name === 'Home')?.path || homedir();
+}
+
+function runCommand(command, args, { windowsHide = true } = {}) {
+  return new Promise((resolveCommand, reject) => {
+    const child = spawn(command, args, { windowsHide });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      resolveCommand({ code: code ?? 1, stdout: stdout.trim(), stderr: stderr.trim() });
+    });
+  });
+}
+
+function dialogWasCancelled(stderr, stdout) {
+  const text = `${stderr}\n${stdout}`.toLowerCase();
+  return text.includes('cancel');
+}
+
+async function openWindowsFileDialog() {
+  const pickFile = join(tmpdir(), `gopro-360-pick-${randomBytes(8).toString('hex')}.txt`);
+  const script = `
+$pathFile = '${pickFile.replace(/'/g, "''")}'
+$owner = $null
+try {
+  Add-Type -AssemblyName System.Windows.Forms
+  $owner = New-Object System.Windows.Forms.Form
+  $owner.TopMost = $true
+  $owner.ShowInTaskbar = $false
+  $owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+  $owner.Size = New-Object System.Drawing.Size(1, 1)
+  $owner.Opacity = 0
+  $owner.Show()
+  $owner.Activate()
+  $dialog = New-Object System.Windows.Forms.OpenFileDialog
+  $dialog.Filter = 'GoPro 360 (*.360)|*.360|All files (*.*)|*.*'
+  $dialog.Title = 'Select a GoPro .360 file'
+  $dialog.CheckFileExists = $true
+  $dialog.Multiselect = $false
+  $videos = [Environment]::GetFolderPath('MyVideos')
+  if ($videos) { $dialog.InitialDirectory = $videos }
+  $result = $dialog.ShowDialog($owner)
+  if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+    [System.IO.File]::WriteAllText($pathFile, $dialog.FileName, [System.Text.UTF8Encoding]::new($false))
+  }
+} finally {
+  if ($owner) { $owner.Close(); $owner.Dispose() }
+}
+`.trim();
+
+  const { code, stderr } = await runCommand('powershell.exe', [
+    '-STA', '-NoProfile', '-Command', script,
+  ], { windowsHide: false });
+
+  try {
+    const picked = (await readFile(pickFile, 'utf8')).replace(/^\uFEFF/, '').trim();
+    return picked || null;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      if (code !== 0) throw new Error(stderr || 'Could not open the file dialog');
+      return null;
+    }
+    throw err;
+  } finally {
+    await unlink(pickFile).catch(() => {});
+  }
+}
+
+async function openFileDialog() {
+  if (process.platform === 'win32') return openWindowsFileDialog();
+
+  if (process.platform === 'darwin') {
+    const { code, stdout, stderr } = await runCommand('osascript', [
+      '-e', 'POSIX path of (choose file with prompt "Select a GoPro .360 file")',
+    ]);
+    if (code !== 0) {
+      if (dialogWasCancelled(stderr, stdout)) return null;
+      throw new Error(stderr || 'Could not open the file dialog');
+    }
+    return stdout || null;
+  }
+
+  try {
+    const { code, stdout, stderr } = await runCommand('zenity', [
+      '--file-selection',
+      '--title=Select a GoPro .360 file',
+      '--file-filter=*.360',
+    ]);
+    if (code !== 0) {
+      if (code === 1 || dialogWasCancelled(stderr, stdout)) return null;
+      throw new Error(stderr || 'Could not open the file dialog');
+    }
+    return stdout || null;
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+
+  const { code, stdout, stderr } = await runCommand('kdialog', [
+    '--getopenfilename', homedir(), '*.360|GoPro 360 files',
+  ]);
+  if (code !== 0) {
+    if (dialogWasCancelled(stderr, stdout)) return null;
+    throw new Error(stderr || 'Could not open the file dialog. Install zenity or kdialog.');
+  }
+  return stdout || null;
+}
+
+let fileDialogOpen = false;
+
+app.get('/api/fs', async (req, res) => {
+  try {
+    const places = await getQuickPlaces();
+    const drives = await listDrives();
+
+    if (req.query.view === 'computer') {
+      return res.json({
+        path: '',
+        canGoUp: false,
+        upTarget: null,
+        atComputer: true,
+        places,
+        drives,
+        entries: drives.map((drive) => ({ name: drive.name, path: drive.path, kind: 'dir' })),
+      });
+    }
+
+    const requested = typeof req.query.path === 'string' ? req.query.path : '';
+    const listing = await listDirectory(requested || await defaultBrowsePath(places));
+    res.json({ ...listing, atComputer: false, places, drives });
+  } catch (err) {
+    const status = err.status || (err.code === 'ENOENT' ? 404 : 500);
+    const message = err.code === 'ENOENT' ? 'Folder not found' : err.message;
+    res.status(status).json({ error: message });
+  }
+});
+
+app.post('/api/pick-file', async (req, res) => {
+  if (fileDialogOpen) {
+    return res.status(409).json({ error: 'A file dialog is already open' });
+  }
+
+  fileDialogOpen = true;
+  try {
+    const picked = await openFileDialog();
+    if (!picked) return res.json({ cancelled: true });
+    res.json({ path: picked });
+  } catch (err) {
+    console.error('File dialog error:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    fileDialogOpen = false;
+  }
+});
 
 // API: Get file info
 app.get('/api/info', async (req, res) => {

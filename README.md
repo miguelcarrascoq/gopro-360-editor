@@ -57,8 +57,9 @@ npm start
 Go to [http://localhost:3000](http://localhost:3000)
 
 3. **Load a file**:
-   - Paste the full path to your `.360` file (example: `/Users/your-name/Videos/GS010001.360`)
-   - Click "Load file"
+   - Click **Browse** (or click the viewer) and choose the `.360` file with the mouse
+   - Or click **Use system file dialog** to open the usual file picker
+   - You can still paste a full path and click "Load file"
 
 4. **Generate a preview**:
    - Click "Generate preview" (this can take a few minutes)
