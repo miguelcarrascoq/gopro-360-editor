@@ -66,27 +66,33 @@ class GoPro360Editor {
 
     init() {
         const canvas = document.getElementById('viewer');
+        const container = document.getElementById('viewer-container');
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(
-            this.fov,
-            canvas.clientWidth / canvas.clientHeight,
-            0.1,
-            1000
-        );
+        this.camera = new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000);
         this.camera.position.set(0, 0, 0.1);
         this.camera.rotation.order = 'YXZ';
         this.applyView();
+        this.resizeViewer();
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            const container = document.getElementById('viewer-container');
-            this.camera.aspect = container.clientWidth / container.clientHeight;
-            this.camera.updateProjectionMatrix();
-            this.renderer.setSize(container.clientWidth, container.clientHeight);
-        });
+        this.resizeObserver = new ResizeObserver(() => this.resizeViewer());
+        this.resizeObserver.observe(container);
+        window.addEventListener('resize', () => this.resizeViewer());
+    }
+
+    resizeViewer() {
+        const container = document.getElementById('viewer-container');
+        if (!container || !this.renderer || !this.camera) return;
+
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        if (width < 1 || height < 1) return;
+
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        this.renderer.setSize(width, height, false);
     }
 
     setupWebSocket() {

@@ -11,6 +11,11 @@
             box-sizing: border-box;
         }
 
+        html,
+        body {
+            height: 100%;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1a1a1a;
@@ -21,13 +26,15 @@
         #container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            height: 100%;
+            min-height: 0;
         }
 
         header {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            flex-wrap: wrap;
+            gap: 0.75rem 1rem;
             background: #2a2a2a;
             padding: 0.75rem 1.25rem;
             border-bottom: 1px solid #3a3a3a;
@@ -93,16 +100,22 @@
         #main {
             display: flex;
             flex: 1;
+            min-width: 0;
+            min-height: 0;
             overflow: hidden;
         }
 
         #viewer-container {
             flex: 1;
             position: relative;
+            min-width: 0;
+            min-height: 0;
             background: #000;
         }
 
         #viewer {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             display: block;
@@ -244,6 +257,7 @@
         #timeline-footer {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 0.75rem;
         }
 
@@ -410,7 +424,9 @@
             z-index: 3;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 0.55rem;
+            max-width: calc(100% - 24px);
             padding: 0.45rem 0.6rem;
             background: rgba(42, 42, 42, 0.94);
             border: 1px solid #3a3a3a;
