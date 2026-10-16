@@ -479,11 +479,41 @@ class GoPro360Editor {
             folder.textContent = folderPath;
             folder.title = folderPath;
 
-            button.append(kind, name, folder);
+            const size = document.createElement('span');
+            size.className = 'browser-size';
+            size.dataset.path = filePath;
+
+            button.append(kind, name, folder, size);
             button.addEventListener('click', () => {
                 this.loadDirectory(folderPath || null, { fallbackToDefault: Boolean(folderPath) });
             });
             list.append(button);
+        }
+
+        this.fillRecentSizes(recent);
+    }
+
+    async fillRecentSizes(paths) {
+        const requestId = (this.recentSizeRequest || 0) + 1;
+        this.recentSizeRequest = requestId;
+
+        try {
+            const response = await fetch('/api/file-sizes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paths }),
+            });
+            const data = await this.readJson(response);
+            if (requestId !== this.recentSizeRequest) return;
+            if (!response.ok) return;
+
+            const list = document.getElementById('browser-recent-list');
+            for (const size of list.querySelectorAll('.browser-size')) {
+                const bytes = data.sizes?.[size.dataset.path];
+                if (Number.isFinite(bytes)) size.textContent = formatFileSize(bytes);
+            }
+        } catch {
+            // The names still work when sizes cannot be read.
         }
     }
 

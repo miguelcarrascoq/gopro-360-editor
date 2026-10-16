@@ -202,6 +202,21 @@ function loadSampleFile() {
   return samplePromise;
 }
 
+async function fileSizes(paths) {
+  const requested = Array.isArray(paths) ? paths.slice(0, 32) : [];
+  const sizes = {};
+  await Promise.all(requested.map(async (filePath) => {
+    if (typeof filePath !== 'string' || !filePath.trim()) return;
+    try {
+      const info = await stat(filePath);
+      sizes[filePath] = info.isFile() ? info.size : null;
+    } catch {
+      sizes[filePath] = null;
+    }
+  }));
+  return sizes;
+}
+
 async function defaultBrowsePath(places) {
   const videos = places.find((place) => place.name === 'Videos' || place.name === 'OneDrive Videos');
   if (videos) return videos.path;
@@ -345,6 +360,22 @@ app.get('/api/fs', async (req, res) => {
     const status = err.status || (err.code === 'ENOENT' ? 404 : 500);
     const message = err.code === 'ENOENT' ? 'Folder not found' : err.message;
     res.status(status).json({ error: message });
+  }
+});
+
+app.post('/api/file-sizes', express.json(), async (req, res) => {
+  const paths = req.body?.paths;
+  if (paths !== undefined && !Array.isArray(paths)) {
+    return res.status(400).json({ error: 'paths must be a list' });
+  }
+  if (Array.isArray(paths) && paths.length > 32) {
+    return res.status(400).json({ error: 'Too many paths' });
+  }
+
+  try {
+    res.json({ sizes: await fileSizes(paths) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
