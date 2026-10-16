@@ -2,8 +2,36 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { join } from 'path';
 import { mkdir, unlink, access } from 'fs/promises';
-import { GoProProcessor } from './gopro-processor.js';
+import { GoProProcessor, ffmpegProgressPercent } from './gopro-processor.js';
 import { TestGenerator } from './test-generator.js';
+
+test('ffprobe resolution ignores codec tags like 0x31637668', () => {
+  const processor = new GoProProcessor();
+  const sample = [
+    'Duration: 00:08:02.50, start: 0.000000, bitrate: 66408 kb/s',
+    'Stream #0:0[0x1](eng): Video: hevc (Main) (hvc1 / 0x31637668), yuvj420p(pc, bt709), 4096x1344 [SAR 1:1 DAR 64:21], 29969 kb/s',
+    'Stream #0:1[0x2](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo',
+    'Stream #0:5[0x6](eng): Video: hevc (Main) (hvc1 / 0x31637668), yuvj420p(pc, bt709), 4096x1344, 29968 kb/s'
+  ].join('\n');
+
+  const info = processor._parseFFprobeOutput(sample);
+  assert.strictEqual(info.videoStreams.length, 2);
+  assert.strictEqual(info.videoStreams[0].width, 4096);
+  assert.strictEqual(info.videoStreams[0].height, 1344);
+  assert.ok(info.duration > 482 && info.duration < 483);
+});
+
+test('ffmpeg progress uses the latest timestamp', () => {
+  const chunk = [
+    'frame=1 fps=0.0 time=00:00:00.03 bitrate=N/A',
+    'frame=90 fps=30 time=00:00:03.00 bitrate=800k',
+    'out_time=00:01:30.500000'
+  ].join('\n');
+
+  const progress = ffmpegProgressPercent(chunk, 180);
+  assert.ok(progress > 50 && progress < 51, `expected ~50.3%, got ${progress}`);
+  assert.strictEqual(ffmpegProgressPercent('no timestamps', 10), null);
+});
 
 const TEST_DIR = join(process.cwd(), 'test-output');
 const TEST_FILE = join(TEST_DIR, 'test_dual_stream.mp4');

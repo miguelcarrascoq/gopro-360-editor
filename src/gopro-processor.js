@@ -17,6 +17,27 @@ import path from 'path';
  * - Need to be stacked vertically before converting to equirectangular
  */
 
+/**
+ * Latest encode position reported by ffmpeg, as a percent of duration.
+ * ffmpeg prints a new `time=` (stderr) or `out_time=` (-progress) on every
+ * update. Callers must use the last match in the chunk: the first one is the
+ * oldest timestamp and stays near 0% for the whole job.
+ */
+export function ffmpegProgressPercent(text, durationSeconds) {
+  if (!(durationSeconds > 0) || !text) return null;
+
+  const pattern = /(?:out_)?time=(\d+):(\d+):(\d+(?:\.\d+)?)/g;
+  let match;
+  let last = null;
+  while ((match = pattern.exec(text)) !== null) {
+    last = match;
+  }
+  if (!last) return null;
+
+  const currentTime = Number(last[1]) * 3600 + Number(last[2]) * 60 + Number(last[3]);
+  return Math.min((currentTime / durationSeconds) * 100, 100);
+}
+
 export class GoProProcessor {
   /**
    * Get detailed info about a .360 file
@@ -60,7 +81,8 @@ export class GoProProcessor {
       };
       
       if (streamInfo.type === 'video') {
-        const resMatch = match[4].match(/(\d+)x(\d+)/);
+        // Skip codec tags such as 0x31637668; the real size is 4096x1344.
+        const resMatch = match[4].match(/(\d{2,5})x(\d{2,5})(?!\d)/);
         if (resMatch) {
           streamInfo.width = parseInt(resMatch[1]);
           streamInfo.height = parseInt(resMatch[2]);
@@ -98,55 +120,35 @@ export class GoProProcessor {
       throw new Error('File does not contain dual video streams (not a GoPro .360 file)');
     }
 
-    return new Promise((resolve, reject) => {
-      // Step 1: Stack the two EAC video streams vertically
-      // Stream 0 (front) on top, Stream 1 (back) on bottom
-      // Then convert from EAC (3:2 aspect) to equirectangular (2:1 aspect)
-      const args = [
-        '-i', inputPath,
-        '-filter_complex',
-        // Stack the two video streams vertically
-        '[0:v:0][0:v:1]vstack=inputs=2[stacked];' +
-        // Convert from EAC to equirectangular
-        '[stacked]v360=eac:e:cubic:1920:960[equirect]',
-        '-map', '[equirect]',
-        '-map', '0:a:0?',  // Map audio if present
-        '-c:v', 'libx264',  // Use H.264 for browser compatibility
-        '-preset', 'fast',
-        '-crf', '28',  // Lower quality for preview
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-movflags', '+faststart',  // Enable streaming
-        '-y',
-        outputPath
-      ];
+    // Shrink each EAC half before v360. A MAX 2 clip is two 4096x1344
+    // HEVC streams; projecting that at full size just to preview 720p
+    // spends minutes before the first percent tick.
+    const previewWidth = 1280;
+    const previewHeight = 640;
+    const args = [
+      '-i', inputPath,
+      '-filter_complex',
+      `[0:v:0]scale=${previewWidth}:-2[front];` +
+      `[0:v:1]scale=${previewWidth}:-2[back];` +
+      `[front][back]vstack=inputs=2,` +
+      `v360=input=eac:output=equirect:interp=cubic:w=${previewWidth}:h=${previewHeight}[equirect]`,
+      '-map', '[equirect]',
+      '-map', '0:a:0?',
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-crf', '28',
+      '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      '-progress', 'pipe:1',
+      '-stats_period', '0.5',
+      '-y',
+      outputPath
+    ];
 
-      const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
-      let stderr = '';
-
-      ffmpeg.stderr.on('data', (data) => {
-        stderr += data.toString();
-        
-        if (onProgress) {
-          const timeMatch = stderr.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-          if (timeMatch && info.duration > 0) {
-            const hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const seconds = parseFloat(timeMatch[3]);
-            const currentTime = hours * 3600 + minutes * 60 + seconds;
-            const progress = Math.min((currentTime / info.duration) * 100, 100);
-            onProgress(progress);
-          }
-        }
-      });
-
-      ffmpeg.on('close', (code) => {
-        if (code !== 0) {
-          return reject(new Error(`ffmpeg failed: ${stderr}`));
-        }
-        resolve(outputPath);
-      });
-    });
+    await this._runFfmpeg(args, info.duration, onProgress);
+    return outputPath;
   }
 
   /**
@@ -160,78 +162,79 @@ export class GoProProcessor {
     }
 
     const duration = endTime - startTime;
+    let crf, preset;
+    switch (quality) {
+      case 'high':
+        crf = 18;
+        preset = 'slow';
+        break;
+      case 'medium':
+        crf = 23;
+        preset = 'medium';
+        break;
+      case 'low':
+        crf = 28;
+        preset = 'fast';
+        break;
+      default:
+        crf = 23;
+        preset = 'medium';
+    }
 
-    return new Promise((resolve, reject) => {
-      let crf, preset;
-      switch (quality) {
-        case 'high':
-          crf = 18;
-          preset = 'slow';
-          break;
-        case 'medium':
-          crf = 23;
-          preset = 'medium';
-          break;
-        case 'low':
-          crf = 28;
-          preset = 'fast';
-          break;
-        default:
-          crf = 23;
-          preset = 'medium';
-      }
-
-      const args = [
+    const args = [
         '-ss', startTime.toString(),
         '-i', inputPath,
         '-t', duration.toString(),
         '-filter_complex',
         // Stack and convert to equirectangular at full resolution
         '[0:v:0][0:v:1]vstack=inputs=2[stacked];' +
-        '[stacked]v360=eac:e:cubic:3840:1920[equirect]',
+        '[stacked]v360=input=eac:output=equirect:interp=cubic:w=3840:h=1920[equirect]',
         '-map', '[equirect]',
         '-map', '0:a:0?',
         '-c:v', 'libx264',
         '-preset', preset,
         '-crf', crf.toString(),
+        '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
         '-b:a', '192k',
         '-movflags', '+faststart',
+        '-progress', 'pipe:1',
+        '-stats_period', '0.5',
         '-y',
         outputPath
       ];
 
+    await this._runFfmpeg(args, duration, onProgress);
+    await this.inject360Metadata(outputPath);
+    return outputPath;
+  }
+
+  _runFfmpeg(args, duration, onProgress) {
+    return new Promise((resolve, reject) => {
       const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stderr = '';
+      let lastProgress = -1;
 
+      const report = (chunk) => {
+        const progress = ffmpegProgressPercent(chunk.toString(), duration);
+        if (progress == null || progress <= lastProgress || !onProgress) return;
+        lastProgress = progress;
+        onProgress(progress);
+      };
+
+      ffmpeg.stdout.on('data', report);
       ffmpeg.stderr.on('data', (data) => {
         stderr += data.toString();
-        
-        if (onProgress) {
-          const timeMatch = stderr.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d{2})/);
-          if (timeMatch && duration > 0) {
-            const hours = parseInt(timeMatch[1]);
-            const minutes = parseInt(timeMatch[2]);
-            const seconds = parseFloat(timeMatch[3]);
-            const currentTime = hours * 3600 + minutes * 60 + seconds;
-            const progress = Math.min((currentTime / duration) * 100, 100);
-            onProgress(progress);
-          }
-        }
+        if (stderr.length > 100000) stderr = stderr.slice(-50000);
+        report(data);
       });
 
-      ffmpeg.on('close', async (code) => {
+      ffmpeg.on('error', reject);
+      ffmpeg.on('close', (code) => {
         if (code !== 0) {
           return reject(new Error(`ffmpeg failed: ${stderr}`));
         }
-        
-        // Inject 360 spherical metadata for YouTube/player compatibility
-        try {
-          await this.inject360Metadata(outputPath);
-          resolve(outputPath);
-        } catch (err) {
-          reject(err);
-        }
+        resolve();
       });
     });
   }

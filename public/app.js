@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 
+function previewMediaUrl(outputPath) {
+    const name = String(outputPath).split(/[/\\]/).pop();
+    return `/temp/${name}`;
+}
+
 class GoPro360Editor {
     constructor() {
         this.currentFile = null;
@@ -420,8 +425,9 @@ class GoPro360Editor {
         if (status === 'processing') {
             const fill = progressDiv.querySelector('.progress-fill');
             const text = progressDiv.querySelector('.progress-text');
+            const shown = progress < 10 ? (Math.round(progress * 10) / 10) : Math.round(progress);
             if (fill) fill.style.width = `${progress}%`;
-            if (text) text.textContent = `${message} (${Math.round(progress)}%)`;
+            if (text) text.textContent = `${message} (${shown}%)`;
         } else if (status === 'complete') {
             if (progressDiv === document.getElementById('preview-progress')) {
                 this.loadPreview(jobId);
@@ -454,7 +460,7 @@ class GoPro360Editor {
                 throw new Error('Preview not ready');
             }
 
-            const videoPath = job.outputPath.replace(/.*\/temp\//, '/temp/');
+            const videoPath = previewMediaUrl(job.outputPath);
             this.setupVideoPlayer(videoPath);
 
             document.getElementById('preview-progress').style.display = 'none';
@@ -555,5 +561,4 @@ class GoPro360Editor {
     }
 }
 
-// Initialize the app
 new GoPro360Editor();
