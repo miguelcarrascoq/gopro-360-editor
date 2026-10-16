@@ -182,10 +182,10 @@
 
         #timeline {
             position: relative;
-            height: 56px;
+            height: 28px;
             background: #1a1a1a;
             border-radius: 4px;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             cursor: pointer;
         }
 
@@ -241,27 +241,36 @@
             pointer-events: none;
         }
 
+        #timeline-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
         #playback-controls {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             align-items: center;
+            flex: 0 0 auto;
         }
 
         #trim-info {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
             gap: 0.5rem;
-            margin-top: 0.85rem;
+            margin-left: auto;
+            min-width: 0;
         }
 
         .trim-stat {
             display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-            padding: 0.45rem 0.7rem;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 0.35rem;
+            padding: 0.25rem 0.55rem;
             background: #1a1a1a;
             border-radius: 6px;
             border-left: 3px solid #666;
+            white-space: nowrap;
         }
 
         .trim-stat .trim-label {
@@ -270,7 +279,7 @@
         }
 
         .trim-stat .trim-value {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-variant-numeric: tabular-nums;
             color: #fff;
         }
@@ -855,22 +864,24 @@
                         <div id="start-marker" class="timeline-marker"></div>
                         <div id="end-marker" class="timeline-marker"></div>
                     </div>
-                    <div id="playback-controls">
-                        <button id="play-pause" class="btn btn-secondary">▶</button>
-                        <span id="current-time">0:00 / 0:00</span>
-                    </div>
-                    <div id="trim-info">
-                        <div class="trim-stat trim-start">
-                            <span class="trim-label">Start</span>
-                            <span id="trim-start" class="trim-value">0:00</span>
+                    <div id="timeline-footer">
+                        <div id="playback-controls">
+                            <button id="play-pause" class="btn btn-secondary">▶</button>
+                            <span id="current-time">0:00 / 0:00</span>
                         </div>
-                        <div class="trim-stat trim-end">
-                            <span class="trim-label">End</span>
-                            <span id="trim-end" class="trim-value">0:00</span>
-                        </div>
-                        <div class="trim-stat trim-duration">
-                            <span class="trim-label">Duration</span>
-                            <span id="trim-duration" class="trim-value">0:00</span>
+                        <div id="trim-info">
+                            <div class="trim-stat trim-start">
+                                <span class="trim-label">Start</span>
+                                <span id="trim-start" class="trim-value">0:00</span>
+                            </div>
+                            <div class="trim-stat trim-end">
+                                <span class="trim-label">End</span>
+                                <span id="trim-end" class="trim-value">0:00</span>
+                            </div>
+                            <div class="trim-stat trim-duration">
+                                <span class="trim-label">Duration</span>
+                                <span id="trim-duration" class="trim-value">0:00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
