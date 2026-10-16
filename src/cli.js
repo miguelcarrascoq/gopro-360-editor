@@ -9,32 +9,32 @@ function showHelp() {
   console.log(`
 GoPro 360 Editor CLI
 
-Uso:
-  npm run cli <comando> [opciones]
+Usage:
+  npm run cli <command> [options]
 
-Comandos:
+Commands:
 
-  info <archivo.360>
-    Muestra información del archivo .360
+  info <file.360>
+    Show information about a .360 file
 
-  convert <archivo.360> <salida.mp4> [opciones]
-    Convierte un archivo .360 a MP4 equirectangular
+  convert <file.360> <output.mp4> [options]
+    Convert a .360 file to an equirectangular MP4
 
-    Opciones:
-      --start <segundos>    Tiempo de inicio (default: 0)
-      --end <segundos>      Tiempo de fin (default: duración completa)
-      --quality <nivel>     Calidad: high, medium, low (default: medium)
+    Options:
+      --start <seconds>     Start time (default: 0)
+      --end <seconds>       End time (default: full duration)
+      --quality <level>     Quality: high, medium, low (default: medium)
 
-Ejemplos:
+Examples:
 
-  # Ver información del archivo
-  npm run cli info /ruta/a/video.360
+  # Show file information
+  npm run cli info /path/to/video.360
 
-  # Convertir archivo completo
-  npm run cli convert /ruta/a/video.360 salida.mp4
+  # Convert the full file
+  npm run cli convert /path/to/video.360 output.mp4
 
-  # Convertir segmento recortado
-  npm run cli convert /ruta/a/video.360 salida.mp4 --start 10 --end 30 --quality high
+  # Convert a trimmed segment
+  npm run cli convert /path/to/video.360 output.mp4 --start 10 --end 30 --quality high
 `);
 }
 
@@ -49,14 +49,14 @@ async function fileExists(path) {
 
 async function showInfo(filePath) {
   if (!await fileExists(filePath)) {
-    console.error(`❌ Error: Archivo no encontrado: ${filePath}`);
+    console.error(`❌ Error: File not found: ${filePath}`);
     process.exit(1);
   }
 
   const processor = new GoProProcessor();
   
   try {
-    console.log(`\n📊 Analizando ${basename(filePath)}...\n`);
+    console.log(`\n📊 Analyzing ${basename(filePath)}...\n`);
     
     const validation = await processor.validate360File(filePath);
     
@@ -67,16 +67,16 @@ async function showInfo(filePath) {
 
     const info = validation.info;
     
-    console.log(`✓ Archivo válido de GoPro .360`);
-    console.log(`\nInformación:`);
-    console.log(`  Duración: ${formatTime(info.duration)}`);
-    console.log(`  Streams de video: ${info.videoStreams.length}`);
+    console.log(`✓ Valid GoPro .360 file`);
+    console.log(`\nInformation:`);
+    console.log(`  Duration: ${formatTime(info.duration)}`);
+    console.log(`  Video streams: ${info.videoStreams.length}`);
     
     info.videoStreams.forEach((stream, i) => {
       console.log(`    Stream ${i}: ${stream.width}x${stream.height} (${stream.codec})`);
     });
     
-    console.log(`  Streams de audio: ${info.audioStreams.length}`);
+    console.log(`  Audio streams: ${info.audioStreams.length}`);
     
     info.audioStreams.forEach((stream, i) => {
       console.log(`    Stream ${i}: ${stream.codec}`);
@@ -92,14 +92,14 @@ async function showInfo(filePath) {
 
 async function convert(filePath, outputPath, options = {}) {
   if (!await fileExists(filePath)) {
-    console.error(`❌ Error: Archivo no encontrado: ${filePath}`);
+    console.error(`❌ Error: File not found: ${filePath}`);
     process.exit(1);
   }
 
   const processor = new GoProProcessor();
   
   try {
-    console.log(`\n🎥 Convirtiendo ${basename(filePath)}...\n`);
+    console.log(`\n🎥 Converting ${basename(filePath)}...\n`);
     
     const validation = await processor.validate360File(filePath);
     
@@ -114,14 +114,14 @@ async function convert(filePath, outputPath, options = {}) {
     const quality = options.quality || 'medium';
 
     if (startTime < 0 || endTime > info.duration || startTime >= endTime) {
-      console.error(`❌ Error: Rango de tiempo inválido`);
+      console.error(`❌ Error: Invalid time range`);
       process.exit(1);
     }
 
-    console.log(`  Entrada: ${basename(filePath)}`);
-    console.log(`  Salida: ${basename(outputPath)}`);
-    console.log(`  Rango: ${formatTime(startTime)} - ${formatTime(endTime)} (${formatTime(endTime - startTime)})`);
-    console.log(`  Calidad: ${quality}`);
+    console.log(`  Input: ${basename(filePath)}`);
+    console.log(`  Output: ${basename(outputPath)}`);
+    console.log(`  Range: ${formatTime(startTime)} - ${formatTime(endTime)} (${formatTime(endTime - startTime)})`);
+    console.log(`  Quality: ${quality}`);
     console.log('');
 
     let lastProgress = 0;
@@ -135,14 +135,14 @@ async function convert(filePath, outputPath, options = {}) {
       (progress) => {
         const rounded = Math.floor(progress);
         if (rounded > lastProgress && rounded % 5 === 0) {
-          process.stdout.write(`\r  Progreso: ${'█'.repeat(rounded / 5)}${'░'.repeat(20 - rounded / 5)} ${rounded}%`);
+          process.stdout.write(`\r  Progress: ${'█'.repeat(rounded / 5)}${'░'.repeat(20 - rounded / 5)} ${rounded}%`);
           lastProgress = rounded;
         }
       }
     );
 
-    console.log('\n\n✓ Conversión completada exitosamente!');
-    console.log(`  Archivo guardado: ${outputPath}\n`);
+    console.log('\n\n✓ Conversion completed successfully!');
+    console.log(`  File saved: ${outputPath}\n`);
     
   } catch (err) {
     console.error(`\n❌ Error: ${err.message}`);
@@ -190,7 +190,7 @@ function parseArgs(args, startIndex) {
   switch (command) {
     case 'info':
       if (args.length < 2) {
-        console.error('❌ Error: Falta el archivo de entrada');
+        console.error('❌ Error: Missing input file');
         showHelp();
         process.exit(1);
       }
@@ -199,7 +199,7 @@ function parseArgs(args, startIndex) {
 
     case 'convert':
       if (args.length < 3) {
-        console.error('❌ Error: Falta el archivo de entrada o salida');
+        console.error('❌ Error: Missing input or output file');
         showHelp();
         process.exit(1);
       }
@@ -208,7 +208,7 @@ function parseArgs(args, startIndex) {
       break;
 
     default:
-      console.error(`❌ Error: Comando desconocido: ${command}`);
+      console.error(`❌ Error: Unknown command: ${command}`);
       showHelp();
       process.exit(1);
   }

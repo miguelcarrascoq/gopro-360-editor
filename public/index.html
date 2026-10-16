@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -285,7 +285,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    <p>Carga un archivo .360 para comenzar</p>
+                    <p>Load a .360 file to get started</p>
                 </div>
 
                 <div id="timeline-container">
@@ -303,51 +303,51 @@
 
             <div id="controls-panel">
                 <div class="section">
-                    <h2>1. Cargar archivo</h2>
+                    <h2>1. Load file</h2>
                     <div class="instructions">
-                        <strong>Pega la ruta completa</strong> de tu archivo .360 de GoPro MAX
+                        <strong>Paste the full path</strong> to your GoPro MAX .360 file
                     </div>
-                    <input type="text" id="file-path" placeholder="/ruta/a/archivo.360">
-                    <button id="load-btn" class="btn">Cargar archivo</button>
+                    <input type="text" id="file-path" placeholder="/path/to/file.360">
+                    <button id="load-btn" class="btn">Load file</button>
                     <div id="file-info" class="file-info" style="display: none; margin-top: 1rem;"></div>
                 </div>
 
                 <div class="section">
-                    <h2>2. Generar vista previa</h2>
-                    <button id="preview-btn" class="btn" disabled>Generar vista previa</button>
+                    <h2>2. Generate preview</h2>
+                    <button id="preview-btn" class="btn" disabled>Generate preview</button>
                     <div id="preview-progress" class="progress"></div>
                 </div>
 
                 <div class="section">
-                    <h2>3. Recortar (opcional)</h2>
+                    <h2>3. Trim (optional)</h2>
                     <div class="instructions">
-                        Arrastra los marcadores <span style="color: #4ade80;">verde</span> (inicio) y <span style="color: #ef4444;">rojo</span> (fin) en la línea de tiempo
+                        Drag the <span style="color: #4ade80;">green</span> (start) and <span style="color: #ef4444;">red</span> (end) markers on the timeline
                     </div>
                     <div class="file-info-item">
-                        <span class="file-info-label">Inicio:</span>
+                        <span class="file-info-label">Start:</span>
                         <span id="trim-start">0:00</span>
                     </div>
                     <div class="file-info-item">
-                        <span class="file-info-label">Fin:</span>
+                        <span class="file-info-label">End:</span>
                         <span id="trim-end">0:00</span>
                     </div>
                     <div class="file-info-item">
-                        <span class="file-info-label">Duración:</span>
+                        <span class="file-info-label">Duration:</span>
                         <span id="trim-duration">0:00</span>
                     </div>
                 </div>
 
                 <div class="section">
-                    <h2>4. Exportar</h2>
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Calidad:</label>
+                    <h2>4. Export</h2>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Quality:</label>
                     <select id="quality">
-                        <option value="high">Alta (CRF 18, lento)</option>
-                        <option value="medium" selected>Media (CRF 23, normal)</option>
-                        <option value="low">Baja (CRF 28, rápido)</option>
+                        <option value="high">High (CRF 18, slow)</option>
+                        <option value="medium" selected>Medium (CRF 23, normal)</option>
+                        <option value="low">Low (CRF 28, fast)</option>
                     </select>
-                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Nombre del archivo:</label>
-                    <input type="text" id="output-name" placeholder="mi_video_360">
-                    <button id="export-btn" class="btn" disabled>Exportar MP4</button>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">File name:</label>
+                    <input type="text" id="output-name" placeholder="my_360_video">
+                    <button id="export-btn" class="btn" disabled>Export MP4</button>
                     <div id="export-progress" class="progress"></div>
                 </div>
             </div>

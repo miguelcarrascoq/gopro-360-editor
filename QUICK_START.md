@@ -1,83 +1,83 @@
-# Inicio Rápido - GoPro 360 Editor
+# Quick Start — GoPro 360 Editor
 
-## ⚡ Comenzar en 3 pasos
+## ⚡ Get started in 3 steps
 
-### 1. Instalar dependencias
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Iniciar la aplicación
+### 2. Start the app
 
 ```bash
 npm start
 ```
 
-### 3. Abrir en el navegador
+### 3. Open it in the browser
 
-Navega a [http://localhost:3000](http://localhost:3000)
+Go to [http://localhost:3000](http://localhost:3000)
 
-## 🎬 Flujo de trabajo típico
+## 🎬 Typical workflow
 
-1. **Pega la ruta** de tu archivo `.360` en el campo de texto
-   - Ejemplo: `/Users/tu-nombre/GoPro/GS010001.360`
+1. **Paste the path** to your `.360` file in the text field
+   - Example: `/Users/your-name/GoPro/GS010001.360`
    
-2. **Carga el archivo** - click en "Cargar archivo"
+2. **Load the file** — click "Load file"
 
-3. **Genera vista previa** - click en "Generar vista previa"
-   - Espera 2-5 minutos dependiendo del tamaño del archivo
-   - La vista previa te permite explorar el video 360° arrastrando con el mouse
+3. **Generate a preview** — click "Generate preview"
+   - Wait 2–5 minutes depending on the file size
+   - The preview lets you explore the 360° video by dragging with the mouse
 
-4. **Recorta (opcional)** - arrastra los marcadores verde y rojo
+4. **Trim (optional)** — drag the green and red markers
 
-5. **Exporta** - selecciona calidad y click en "Exportar MP4"
-   - El archivo se guarda en la carpeta `temp/`
+5. **Export** — choose a quality and click "Export MP4"
+   - The file is saved in the `temp/` folder
 
-## 💡 Consejos
+## 💡 Tips
 
-- **Primera vez**: Usa calidad "baja" para probar rápidamente
-- **Para YouTube**: Usa calidad "alta" o "media"
-- **Archivos grandes**: La conversión puede tardar 10-20 minutos
-- **Vista previa**: Puedes reproducir y navegar el video mientras decides dónde recortar
+- **First time**: Use "low" quality to try it quickly
+- **For YouTube**: Use "high" or "medium" quality
+- **Large files**: Conversion can take 10–20 minutes
+- **Preview**: You can play and look around the video while you decide where to trim
 
-## 🛠️ Conversión por línea de comandos
+## 🛠️ Command-line conversion
 
-Si prefieres la terminal:
+If you prefer the terminal:
 
 ```bash
-# Ver información
-npm run cli info /ruta/a/archivo.360
+# Show information
+npm run cli info /path/to/file.360
 
-# Convertir completo
-npm run cli convert /ruta/a/archivo.360 salida.mp4
+# Convert the full file
+npm run cli convert /path/to/file.360 output.mp4
 
-# Recortar y convertir
-npm run cli convert /ruta/a/archivo.360 salida.mp4 --start 30 --end 120 --quality high
+# Trim and convert
+npm run cli convert /path/to/file.360 output.mp4 --start 30 --end 120 --quality high
 ```
 
-## ❓ Problemas comunes
+## ❓ Common problems
 
 **"File not found"**
-- Verifica la ruta completa del archivo
-- En macOS, arrastra el archivo a la terminal para obtener la ruta
+- Check the full file path
+- On macOS, drag the file into the terminal to get the path
 
 **"Not a dual-stream .360 file"**
-- El archivo debe ser de GoPro MAX o MAX 2
-- No funciona con archivos .360 de otras cámaras
+- The file must come from a GoPro MAX or MAX 2
+- Files from other cameras are not supported
 
-**La vista previa no carga**
-- Espera a que termine la conversión (verás progreso en pantalla)
-- Verifica que el puerto 3000 esté libre
+**The preview does not load**
+- Wait until conversion finishes (you will see progress on screen)
+- Make sure port 3000 is free
 
-## 📱 Siguiente paso: Subir a YouTube
+## 📱 Next step: upload to YouTube
 
-1. Una vez exportado, ve a [YouTube Studio](https://studio.youtube.com)
-2. Click en "Subir videos"
-3. Selecciona tu archivo MP4 exportado
-4. YouTube detectará automáticamente que es un video 360°
-5. ¡Listo! El video será procesable como 360° en YouTube
+1. After export, go to [YouTube Studio](https://studio.youtube.com)
+2. Click "Upload videos"
+3. Select your exported MP4 file
+4. YouTube will automatically detect that it is a 360° video
+5. Done. The video will be playable as 360° on YouTube
 
 ---
 
-Para documentación completa, consulta [README.md](README.md)
+For full documentation, see [README.md](README.md)

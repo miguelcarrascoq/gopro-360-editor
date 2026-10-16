@@ -137,7 +137,7 @@ class GoPro360Editor {
         const filePath = document.getElementById('file-path').value.trim();
         
         if (!filePath) {
-            alert('Por favor ingresa la ruta del archivo');
+            alert('Please enter the file path');
             return;
         }
 
@@ -146,7 +146,7 @@ class GoPro360Editor {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error al cargar el archivo');
+                throw new Error(data.error || 'Failed to load file');
             }
 
             this.currentFile = filePath;
@@ -166,20 +166,20 @@ class GoPro360Editor {
     displayFileInfo(info) {
         const html = `
             <div class="file-info-item">
-                <span class="file-info-label">Duración:</span>
+                <span class="file-info-label">Duration:</span>
                 <span>${this.formatTime(info.duration)}</span>
             </div>
             <div class="file-info-item">
-                <span class="file-info-label">Streams de video:</span>
+                <span class="file-info-label">Video streams:</span>
                 <span>${info.videoStreams.length}</span>
             </div>
             <div class="file-info-item">
-                <span class="file-info-label">Resolución:</span>
+                <span class="file-info-label">Resolution:</span>
                 <span>${info.videoStreams[0].width}x${info.videoStreams[0].height}</span>
             </div>
             <div class="file-info-item">
                 <span class="file-info-label">Audio:</span>
-                <span>${info.audioStreams.length > 0 ? 'Sí' : 'No'}</span>
+                <span>${info.audioStreams.length > 0 ? 'Yes' : 'No'}</span>
             </div>
         `;
         document.getElementById('file-info').innerHTML = html;
@@ -188,7 +188,7 @@ class GoPro360Editor {
     async generatePreview() {
         const progressDiv = document.getElementById('preview-progress');
         progressDiv.style.display = 'block';
-        progressDiv.innerHTML = '<div class="progress-text">Generando vista previa...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
+        progressDiv.innerHTML = '<div class="progress-text">Generating preview...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
 
         document.getElementById('preview-btn').disabled = true;
 
@@ -202,7 +202,7 @@ class GoPro360Editor {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error al generar vista previa');
+                throw new Error(data.error || 'Failed to generate preview');
             }
 
             this.currentJobId = data.jobId;
@@ -220,7 +220,7 @@ class GoPro360Editor {
 
         const progressDiv = document.getElementById('export-progress');
         progressDiv.style.display = 'block';
-        progressDiv.innerHTML = '<div class="progress-text">Exportando...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
+        progressDiv.innerHTML = '<div class="progress-text">Exporting...</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>';
 
         document.getElementById('export-btn').disabled = true;
 
@@ -240,7 +240,7 @@ class GoPro360Editor {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Error al exportar');
+                throw new Error(data.error || 'Failed to export');
             }
 
             this.currentJobId = data.jobId;
@@ -258,7 +258,7 @@ class GoPro360Editor {
         let progressDiv;
         
         // Determine which progress div to update
-        if (document.getElementById('preview-progress').querySelector('.progress-text')?.textContent.includes('Generando')) {
+        if (document.getElementById('preview-progress').querySelector('.progress-text')?.textContent.includes('Generating')) {
             progressDiv = document.getElementById('preview-progress');
         } else {
             progressDiv = document.getElementById('export-progress');
@@ -273,7 +273,7 @@ class GoPro360Editor {
             if (progressDiv === document.getElementById('preview-progress')) {
                 this.loadPreview(jobId);
             } else {
-                progressDiv.innerHTML = '<div class="progress-text" style="color: #4ade80;">✓ Exportación completa. Verifica la carpeta temp/</div>';
+                progressDiv.innerHTML = '<div class="progress-text" style="color: #4ade80;">✓ Export complete. Check the temp/ folder</div>';
                 setTimeout(() => {
                     progressDiv.style.display = 'none';
                     document.getElementById('export-btn').disabled = false;

@@ -1,7 +1,7 @@
 {
   "name": "gopro-360-editor",
   "version": "1.0.0",
-  "description": "Herramienta local gratuita para ver, recortar y exportar archivos GoPro MAX .360 a formato equirectangular MP4",
+  "description": "Free local tool to preview, trim, and export GoPro MAX .360 files as equirectangular MP4",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
