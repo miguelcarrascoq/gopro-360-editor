@@ -11,9 +11,9 @@ function wrapDegrees(degrees) {
 
 const RECENT_FILES_KEY = 'gopro-recent-files';
 const RECENT_FILES_LIMIT = 8;
-const DEFAULT_FOV = 75;
+const DEFAULT_FOV = 100;
 const MIN_FOV = 30;
-const MAX_FOV = 110;
+const MAX_FOV = 150;
 
 function folderFromFile(filePath) {
     let folder = String(filePath).replace(/[\\/][^\\/]+$/, '');
