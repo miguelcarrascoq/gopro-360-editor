@@ -11,6 +11,9 @@ function wrapDegrees(degrees) {
 
 const RECENT_FILES_KEY = 'gopro-recent-files';
 const RECENT_FILES_LIMIT = 8;
+const DEFAULT_FOV = 75;
+const MIN_FOV = 30;
+const MAX_FOV = 110;
 
 function folderFromFile(filePath) {
     let folder = String(filePath).replace(/[\\/][^\\/]+$/, '');
@@ -39,6 +42,7 @@ class GoPro360Editor {
         this.yaw = 0;
         this.pitch = 0;
         this.roll = 0;
+        this.fov = DEFAULT_FOV;
         this.ws = null;
         this.activeJob = null;
 
@@ -54,7 +58,7 @@ class GoPro360Editor {
 
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(
-            75,
+            this.fov,
             canvas.clientWidth / canvas.clientHeight,
             0.1,
             1000
@@ -121,6 +125,7 @@ class GoPro360Editor {
         canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         canvas.addEventListener('mouseup', () => this.onMouseUp());
         canvas.addEventListener('mouseleave', () => this.onMouseUp());
+        canvas.addEventListener('wheel', (event) => this.onZoomWheel(event), { passive: false });
 
         // Timeline markers
         document.getElementById('start-marker').addEventListener('mousedown', (e) => {
@@ -258,6 +263,16 @@ class GoPro360Editor {
             dial.addEventListener('dblclick', () => this.resetAxis(axis));
         });
         document.getElementById('view-reset').addEventListener('click', () => this.resetView());
+
+        const zoom = document.querySelector('.view-zoom');
+        zoom.addEventListener('wheel', (event) => this.onZoomWheel(event), { passive: false });
+        document.getElementById('zoom-in').addEventListener('click', (event) => {
+            this.nudgeFov(-1, event.shiftKey);
+        });
+        document.getElementById('zoom-out').addEventListener('click', (event) => {
+            this.nudgeFov(1, event.shiftKey);
+        });
+        document.getElementById('zoom-value').addEventListener('dblclick', () => this.setFov(DEFAULT_FOV));
     }
 
     onKnobDown(event, axis) {
@@ -305,15 +320,35 @@ class GoPro360Editor {
         this.applyView();
     }
 
+    nudgeFov(direction, fine) {
+        const step = fine ? 1 : 5;
+        this.setFov(this.fov + direction * step);
+    }
+
+    onZoomWheel(event) {
+        event.preventDefault();
+        this.nudgeFov(event.deltaY < 0 ? -1 : 1, event.shiftKey);
+    }
+
+    setFov(degrees) {
+        this.fov = Math.max(MIN_FOV, Math.min(MAX_FOV, degrees));
+        this.camera.fov = this.fov;
+        this.camera.updateProjectionMatrix();
+        this.syncZoom();
+    }
+
     resetView() {
         this.yaw = 0;
         this.pitch = 0;
         this.roll = 0;
+        this.fov = DEFAULT_FOV;
         this.applyView();
     }
 
     applyView() {
         this.camera.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
+        this.camera.fov = this.fov;
+        this.camera.updateProjectionMatrix();
         this.syncViewControls();
     }
 
@@ -321,6 +356,19 @@ class GoPro360Editor {
         this.syncKnob('yaw', this.yaw);
         this.syncKnob('pitch', this.pitch);
         this.syncKnob('roll', this.roll);
+        this.syncZoom();
+    }
+
+    syncZoom() {
+        const value = document.getElementById('zoom-value');
+        const zoomIn = document.getElementById('zoom-in');
+        const zoomOut = document.getElementById('zoom-out');
+        if (!value || !zoomIn || !zoomOut) return;
+
+        const shown = Math.round(this.fov);
+        value.textContent = `${shown}°`;
+        zoomIn.disabled = this.fov <= MIN_FOV;
+        zoomOut.disabled = this.fov >= MAX_FOV;
     }
 
     syncKnob(axis, radians) {

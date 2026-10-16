@@ -248,23 +248,39 @@
         }
 
         #trim-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.85rem;
+        }
+
+        .trim-stat {
             display: flex;
-            gap: 1.25rem;
-            margin-top: 0.6rem;
-            font-size: 0.85rem;
+            flex-direction: column;
+            gap: 0.15rem;
+            padding: 0.45rem 0.7rem;
+            background: #1a1a1a;
+            border-radius: 6px;
+            border-left: 3px solid #666;
         }
 
-        #trim-info .trim-label {
+        .trim-stat .trim-label {
             color: #888;
-            margin-right: 0.35rem;
+            font-size: 0.7rem;
         }
 
-        #trim-info .trim-start-label {
-            color: #4ade80;
+        .trim-stat .trim-value {
+            font-size: 0.95rem;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
         }
 
-        #trim-info .trim-end-label {
-            color: #ef4444;
+        .trim-start {
+            border-left-color: #4ade80;
+        }
+
+        .trim-end {
+            border-left-color: #ef4444;
         }
 
         #play-pause {
@@ -455,6 +471,71 @@
             color: #fff;
             min-width: 3.2rem;
             text-align: center;
+        }
+
+        .view-divider {
+            width: 1px;
+            align-self: stretch;
+            background: #3a3a3a;
+            margin: 0.15rem 0;
+        }
+
+        .view-zoom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            min-width: 7rem;
+        }
+
+        .zoom-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            height: 56px;
+        }
+
+        .zoom-btn,
+        .zoom-value {
+            border: 1px solid #4a4a4a;
+            background: #1a1a1a;
+            color: #fff;
+            font: inherit;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            font-size: 1.05rem;
+            line-height: 1;
+        }
+
+        .zoom-btn:hover:not(:disabled) {
+            background: #333;
+            border-color: #4a9eff;
+        }
+
+        .zoom-btn:disabled {
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .zoom-value {
+            min-width: 3.4rem;
+            height: 28px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .zoom-btn:focus-visible,
+        .zoom-value:focus-visible {
+            outline: 2px solid #4a9eff;
+            outline-offset: 2px;
         }
 
         #view-reset {
@@ -727,6 +808,16 @@
                         <span class="knob-label">Roll</span>
                         <span class="knob-value">0°</span>
                     </div>
+                    <div class="view-divider" aria-hidden="true"></div>
+                    <div class="view-zoom">
+                        <div class="zoom-row">
+                            <button id="zoom-out" class="zoom-btn" type="button" aria-label="Zoom out" title="Zoom out (Shift for 1°)">−</button>
+                            <button id="zoom-value" class="zoom-value" type="button" title="Double-click to reset zoom">75°</button>
+                            <button id="zoom-in" class="zoom-btn" type="button" aria-label="Zoom in" title="Zoom in (Shift for 1°)">+</button>
+                        </div>
+                        <span class="knob-label">Zoom</span>
+                    </div>
+                    <div class="view-divider" aria-hidden="true"></div>
                     <button id="view-reset" class="btn btn-secondary" type="button">Reset</button>
                 </div>
 
@@ -753,9 +844,18 @@
                         <span id="current-time">0:00 / 0:00</span>
                     </div>
                     <div id="trim-info">
-                        <span><span class="trim-label trim-start-label">Start</span><span id="trim-start">0:00</span></span>
-                        <span><span class="trim-label trim-end-label">End</span><span id="trim-end">0:00</span></span>
-                        <span><span class="trim-label">Duration</span><span id="trim-duration">0:00</span></span>
+                        <div class="trim-stat trim-start">
+                            <span class="trim-label">Start</span>
+                            <span id="trim-start" class="trim-value">0:00</span>
+                        </div>
+                        <div class="trim-stat trim-end">
+                            <span class="trim-label">End</span>
+                            <span id="trim-end" class="trim-value">0:00</span>
+                        </div>
+                        <div class="trim-stat trim-duration">
+                            <span class="trim-label">Duration</span>
+                            <span id="trim-duration" class="trim-value">0:00</span>
+                        </div>
                     </div>
                 </div>
             </div>
