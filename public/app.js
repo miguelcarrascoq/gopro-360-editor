@@ -67,6 +67,7 @@ class GoPro360Editor {
         this.pitch = 0;
         this.roll = 0;
         this.fov = DEFAULT_FOV;
+        this.animating = false;
         this.ws = null;
         this.activeJob = null;
         this.previewReady = false;
@@ -78,7 +79,7 @@ class GoPro360Editor {
 
     init() {
         const canvas = document.getElementById('viewer');
-        const container = document.getElementById('viewer-container');
+        const container = document.getElementById('viewer-stage');
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 
         this.scene = new THREE.Scene();
@@ -94,7 +95,7 @@ class GoPro360Editor {
     }
 
     resizeViewer() {
-        const container = document.getElementById('viewer-container');
+        const container = document.getElementById('viewer-stage');
         if (!container || !this.renderer || !this.camera) return;
 
         const width = container.clientWidth;
@@ -167,57 +168,31 @@ class GoPro360Editor {
         canvas.addEventListener('mouseleave', () => this.onMouseUp());
         canvas.addEventListener('wheel', (event) => this.onZoomWheel(event), { passive: false });
 
-        // Timeline markers
-        document.getElementById('start-marker').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.beginMarkerDrag('start');
+        const timeline = document.getElementById('timeline');
+        const beginPointerDrag = (event, which) => {
+            event.preventDefault();
+            event.stopPropagation();
+            timeline.setPointerCapture(event.pointerId);
+            this.beginMarkerDrag(which);
+            if (which === 'play') this.scrubPlayhead(event);
+        };
+
+        document.getElementById('start-marker').addEventListener('pointerdown', (event) => {
+            beginPointerDrag(event, 'start');
         });
-
-        document.getElementById('end-marker').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.beginMarkerDrag('end');
+        document.getElementById('end-marker').addEventListener('pointerdown', (event) => {
+            beginPointerDrag(event, 'end');
         });
-
-        document.getElementById('playhead').addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.beginMarkerDrag('play');
+        document.getElementById('playhead').addEventListener('pointerdown', (event) => {
+            beginPointerDrag(event, 'play');
         });
-
-        document.getElementById('timeline').addEventListener('mousedown', (e) => {
-            if (e.target.closest('#start-marker, #end-marker, #playhead')) return;
-            e.preventDefault();
-            this.beginMarkerDrag('play');
-            this.scrubPlayhead(e);
+        timeline.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('#start-marker, #end-marker, #playhead')) return;
+            beginPointerDrag(event, 'play');
         });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!this.draggingMarker || !this.fileInfo) return;
-
-            const time = this.timeFromTimelineEvent(e);
-            if (time == null) return;
-
-            if (this.draggingMarker === 'start') {
-                this.startTime = Math.max(0, Math.min(time, this.endTime - 1));
-                this.updateTimelineUI();
-                this.seekPreview(this.startTime);
-            } else if (this.draggingMarker === 'end') {
-                this.endTime = Math.min(this.fileInfo.duration, Math.max(time, this.startTime + 1));
-                this.updateTimelineUI();
-                this.seekPreview(this.endTime);
-            } else {
-                this.seekPreview(time);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            const resume = this.draggingMarker === 'play' && this.resumeAfterScrub;
-            this.draggingMarker = null;
-            this.resumeAfterScrub = false;
-            if (resume) this.togglePlayback();
-        });
+        document.addEventListener('pointermove', (event) => this.dragMarker(event));
+        document.addEventListener('pointerup', (event) => this.endMarkerDrag(event));
+        document.addEventListener('pointercancel', (event) => this.endMarkerDrag(event));
     }
 
     timeFromTimelineEvent(event) {
@@ -245,6 +220,36 @@ class GoPro360Editor {
         }
     }
 
+    dragMarker(event) {
+        if (!this.draggingMarker || !this.fileInfo) return;
+
+        const time = this.timeFromTimelineEvent(event);
+        if (time == null) return;
+
+        if (this.draggingMarker === 'start') {
+            this.startTime = Math.max(0, Math.min(time, this.endTime - 1));
+            this.updateTimelineUI();
+            this.seekPreview(this.startTime);
+        } else if (this.draggingMarker === 'end') {
+            this.endTime = Math.min(this.fileInfo.duration, Math.max(time, this.startTime + 1));
+            this.updateTimelineUI();
+            this.seekPreview(this.endTime);
+        } else {
+            this.seekPreview(time);
+        }
+    }
+
+    endMarkerDrag(event) {
+        if (!this.draggingMarker) return;
+        if (event && event.currentTarget && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        const resume = this.draggingMarker === 'play' && this.resumeAfterScrub;
+        this.draggingMarker = null;
+        this.resumeAfterScrub = false;
+        if (resume) this.togglePlayback();
+    }
+
     pausePreview() {
         if (this.video) this.video.pause();
         this.isPlaying = false;
@@ -261,9 +266,15 @@ class GoPro360Editor {
         }
 
         const clamped = Math.max(0, Math.min(time, maxTime));
-        if (this.video.readyState >= 1 && Math.abs(this.video.currentTime - clamped) > 0.01) {
-            this.video.currentTime = clamped;
-        }
+        const applySeek = () => {
+            if (!this.video) return;
+            if (Math.abs(this.video.currentTime - clamped) > 0.01) {
+                this.video.currentTime = clamped;
+            }
+            this.refreshVideoFrame();
+        };
+        if (this.video.readyState >= 1) applySeek();
+        else this.video.addEventListener('loadeddata', applySeek, { once: true });
         this.updateCurrentTime(clamped);
     }
 
@@ -280,9 +291,14 @@ class GoPro360Editor {
 
         const deltaX = event.clientX - this.previousMousePosition.x;
         const deltaY = event.clientY - this.previousMousePosition.y;
+        const cos = Math.cos(this.roll);
+        const sin = Math.sin(this.roll);
+        // Screen axes, so a horizontal drag stays horizontal even when Roll is set.
+        const deltaYaw = (deltaX * cos + deltaY * sin) * 0.005;
+        const deltaPitch = (-deltaX * sin + deltaY * cos) * 0.005;
 
-        this.setAxisDegrees('yaw', this.yaw * 180 / Math.PI + deltaX * 0.005 * 180 / Math.PI);
-        this.setAxisDegrees('pitch', this.pitch * 180 / Math.PI + deltaY * 0.005 * 180 / Math.PI);
+        this.setAxisDegrees('yaw', this.yaw * 180 / Math.PI + deltaYaw * 180 / Math.PI);
+        this.setAxisDegrees('pitch', this.pitch * 180 / Math.PI + deltaPitch * 180 / Math.PI);
 
         this.previousMousePosition = {
             x: event.clientX,
@@ -386,7 +402,13 @@ class GoPro360Editor {
     }
 
     applyView() {
-        this.camera.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
+        // Horizontal and vertical orbit a level camera. Roll is only a final
+        // screen tilt, so changing yaw does not add more roll.
+        this.camera.up.set(0, 1, 0);
+        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.set(this.pitch, this.yaw, 0);
+        if (this.roll !== 0) this.camera.rotateZ(this.roll);
+        if (this.sphere) this.sphere.quaternion.identity();
         this.camera.fov = this.fov;
         this.camera.updateProjectionMatrix();
         this.syncViewControls();
@@ -929,11 +951,23 @@ class GoPro360Editor {
     }
 
     setupVideoPlayer(videoPath) {
+        if (this.video) {
+            this.video.pause();
+            this.video.removeAttribute('src');
+            this.video.load();
+            this.video.remove();
+        }
+
         this.video = document.createElement('video');
-        this.video.src = videoPath;
+        this.video.className = 'preview-video';
         this.video.crossOrigin = 'anonymous';
-        this.video.loop = true;
+        this.video.loop = false;
         this.video.muted = true;
+        this.video.defaultMuted = true;
+        this.video.playsInline = true;
+        this.video.preload = 'auto';
+        this.video.src = videoPath;
+        document.body.appendChild(this.video);
 
         this.videoTexture = new THREE.VideoTexture(this.video);
         this.videoTexture.minFilter = THREE.LinearFilter;
@@ -950,23 +984,49 @@ class GoPro360Editor {
 
         this.sphere = new THREE.Mesh(geometry, material);
         this.scene.add(this.sphere);
+        this.applyView();
 
         this.video.addEventListener('loadedmetadata', () => {
-            this.animate();
+            this.startAnimation();
         });
 
         this.video.addEventListener('timeupdate', () => {
             this.updateCurrentTime();
+            this.refreshVideoFrame();
+        });
+
+        this.video.addEventListener('loadeddata', () => {
+            this.refreshVideoFrame();
         });
 
         this.video.addEventListener('seeked', () => {
-            if (this.videoTexture) this.videoTexture.needsUpdate = true;
+            this.refreshVideoFrame();
             this.updateCurrentTime();
         });
+
+        this.startAnimation();
+    }
+
+    startAnimation() {
+        if (this.animating) return;
+        this.animating = true;
+        this.animate();
+    }
+
+    refreshVideoFrame() {
+        if (this.videoTexture && this.video && this.video.readyState >= 2) {
+            this.videoTexture.needsUpdate = true;
+        }
     }
 
     animate() {
         requestAnimationFrame(() => this.animate());
+        if (this.video && !this.video.paused && !this.draggingMarker && this.fileInfo) {
+            if (this.video.currentTime >= this.endTime - 0.05) {
+                this.video.currentTime = this.startTime;
+            }
+        }
+        this.refreshVideoFrame();
         if (this.video && !this.video.paused && !this.draggingMarker) {
             const duration = this.fileInfo ? this.fileInfo.duration : this.video.duration;
             this.updatePlayhead(this.video.currentTime, duration);
@@ -978,14 +1038,21 @@ class GoPro360Editor {
         if (!this.video) return;
 
         if (this.isPlaying) {
-            this.video.pause();
-            document.getElementById('play-pause').textContent = '▶';
-        } else {
-            this.video.play();
-            document.getElementById('play-pause').textContent = '⏸';
+            this.pausePreview();
+            return;
         }
 
-        this.isPlaying = !this.isPlaying;
+        if (this.fileInfo && (this.video.currentTime < this.startTime || this.video.currentTime >= this.endTime - 0.05)) {
+            this.video.currentTime = this.startTime;
+        }
+
+        const playPromise = this.video.play();
+        this.isPlaying = true;
+        const button = document.getElementById('play-pause');
+        if (button) button.textContent = '⏸';
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => this.pausePreview());
+        }
     }
 
     updateCurrentTime(displayTime) {

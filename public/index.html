@@ -107,18 +107,37 @@
 
         #viewer-container {
             flex: 1;
-            position: relative;
+            display: flex;
+            flex-direction: column;
             min-width: 0;
             min-height: 0;
             background: #000;
         }
 
+        #viewer-stage {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+        }
+
         #viewer {
             position: absolute;
             inset: 0;
+            z-index: 0;
             width: 100%;
             height: 100%;
             display: block;
+        }
+
+        .preview-video {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            right: 0;
+            bottom: 0;
+            opacity: 0.02;
+            pointer-events: none;
         }
 
         .btn {
@@ -183,10 +202,7 @@
         }
 
         #timeline-container {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            flex: none;
             background: rgba(42, 42, 42, 0.95);
             padding: 1rem;
             border-top: 1px solid #3a3a3a;
@@ -200,24 +216,43 @@
             border-radius: 4px;
             margin-bottom: 0.5rem;
             cursor: pointer;
+            touch-action: none;
         }
 
         .timeline-marker {
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 2px;
-            background: #4a9eff;
+            width: 16px;
+            margin-left: -8px;
+            background: transparent;
             cursor: ew-resize;
+            touch-action: none;
         }
 
         #start-marker {
             left: 0;
-            background: #4ade80;
         }
 
         #end-marker {
-            right: 0;
+            left: 100%;
+        }
+
+        #start-marker::after,
+        #end-marker::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 7px;
+            width: 2px;
+        }
+
+        #start-marker::after {
+            background: #4ade80;
+        }
+
+        #end-marker::after {
             background: #ef4444;
         }
 
@@ -414,7 +449,8 @@
         }
 
         #timeline-container {
-            z-index: 2;
+            position: relative;
+            z-index: 4;
         }
 
         #view-controls {
@@ -890,6 +926,7 @@
 
         <div id="main">
             <div id="viewer-container">
+                <div id="viewer-stage">
                 <canvas id="viewer"></canvas>
                 <div id="view-controls" hidden>
                     <div class="view-knob" data-axis="yaw">
@@ -907,7 +944,7 @@
                         <span class="knob-label">Vertical</span>
                     </div>
                     <div class="view-knob" data-axis="roll">
-                        <button type="button" class="knob" aria-label="Roll" role="slider" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0">
+                        <button type="button" class="knob" aria-label="Roll" title="Inclina la imagen. Horizontal gira con el horizonte quieto" role="slider" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0">
                             <span class="knob-face"><span class="knob-mark"></span></span>
                             <span class="knob-value">0°</span>
                         </button>
@@ -936,6 +973,7 @@
                         <div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div>
                     </div>
                 </div>
+                </div>
 
                 <div id="timeline-container">
                     <div id="timeline">
@@ -946,7 +984,7 @@
                     </div>
                     <div id="timeline-footer">
                         <div id="playback-controls">
-                            <button id="play-pause" class="btn btn-secondary">▶</button>
+                            <button id="play-pause" class="btn btn-secondary" type="button">▶</button>
                             <span id="current-time">0:00 / 0:00</span>
                         </div>
                         <div id="trim-info">
@@ -1011,6 +1049,6 @@
         }
     }
     </script>
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/app.js?v=6"></script>
 </body>
 </html>
