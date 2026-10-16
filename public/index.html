@@ -799,6 +799,27 @@
             color: #888;
             font-size: 0.8rem;
         }
+
+        .browser-quality {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            min-width: 0;
+        }
+
+        .browser-quality label {
+            flex: none;
+            font-size: 0.85rem;
+            color: #bbb;
+        }
+
+        .browser-quality select {
+            width: 13.5rem;
+            margin-bottom: 0;
+            padding: 0.4rem 0.55rem;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -920,6 +941,14 @@
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="browser-title">
             <div class="modal-header">
                 <h2 id="browser-title">Select a .360 file</h2>
+                <div class="browser-quality">
+                    <label for="preview-quality" title="Quality used to render the preview">Preview</label>
+                    <select id="preview-quality">
+                        <option value="low">Low (960×480, fast)</option>
+                        <option value="medium" selected>Medium (1280×640)</option>
+                        <option value="high">High (1920×960, slower)</option>
+                    </select>
+                </div>
                 <button id="browser-close" class="icon-btn" type="button" aria-label="Close">×</button>
             </div>
             <div class="places" id="browser-places"></div>

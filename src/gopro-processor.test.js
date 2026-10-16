@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { join } from 'path';
 import { mkdir, unlink, access } from 'fs/promises';
-import { GoProProcessor, ffmpegProgressPercent } from './gopro-processor.js';
+import { GoProProcessor, ffmpegProgressPercent, previewQualitySettings } from './gopro-processor.js';
 import { TestGenerator } from './test-generator.js';
 
 test('ffprobe resolution ignores codec tags like 0x31637668', () => {
@@ -19,6 +19,28 @@ test('ffprobe resolution ignores codec tags like 0x31637668', () => {
   assert.strictEqual(info.videoStreams[0].width, 4096);
   assert.strictEqual(info.videoStreams[0].height, 1344);
   assert.ok(info.duration > 482 && info.duration < 483);
+});
+
+test('preview quality maps to a proxy size', () => {
+  assert.deepStrictEqual(previewQualitySettings('low'), {
+    width: 960,
+    height: 480,
+    crf: '30',
+    preset: 'veryfast'
+  });
+  assert.deepStrictEqual(previewQualitySettings('medium'), {
+    width: 1280,
+    height: 640,
+    crf: '28',
+    preset: 'veryfast'
+  });
+  assert.deepStrictEqual(previewQualitySettings('high'), {
+    width: 1920,
+    height: 960,
+    crf: '23',
+    preset: 'fast'
+  });
+  assert.strictEqual(previewQualitySettings('unknown').width, 1280);
 });
 
 test('ffmpeg progress uses the latest timestamp', () => {

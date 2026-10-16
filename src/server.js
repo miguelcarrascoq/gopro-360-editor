@@ -398,7 +398,7 @@ app.get('/api/info', async (req, res) => {
 // API: Generate preview
 app.post('/api/preview', express.json(), async (req, res) => {
   try {
-    const { filePath } = req.body;
+    const { filePath, quality = 'medium' } = req.body;
     
     if (!filePath) {
       return res.status(400).json({ error: 'Missing filePath' });
@@ -421,7 +421,7 @@ app.post('/api/preview', express.json(), async (req, res) => {
       try {
         await processor.generatePreview(filePath, outputPath, (progress) => {
           broadcastProgress(jobId, progress, 'processing', 'Generating preview...');
-        });
+        }, quality);
 
         jobs.set(jobId, { status: 'complete', outputPath });
         broadcastProgress(jobId, 100, 'complete', 'Preview ready');

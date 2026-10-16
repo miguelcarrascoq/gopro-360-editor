@@ -18,6 +18,21 @@ import path from 'path';
  */
 
 /**
+ * Preview proxy size and encode settings.
+ * Medium matches the historical 1280×640 proxy.
+ */
+export function previewQualitySettings(quality = 'medium') {
+  switch (quality) {
+    case 'low':
+      return { width: 960, height: 480, crf: '30', preset: 'veryfast' };
+    case 'high':
+      return { width: 1920, height: 960, crf: '23', preset: 'fast' };
+    default:
+      return { width: 1280, height: 640, crf: '28', preset: 'veryfast' };
+  }
+}
+
+/**
  * Latest encode position reported by ffmpeg, as a percent of duration.
  * ffmpeg prints a new `time=` (stderr) or `out_time=` (-progress) on every
  * update. Callers must use the last match in the chunk: the first one is the
@@ -113,7 +128,7 @@ export class GoProProcessor {
    * Generate a preview proxy file (lower resolution for browser playback)
    * Converts dual EAC streams to equirectangular
    */
-  async generatePreview(inputPath, outputPath, onProgress) {
+  async generatePreview(inputPath, outputPath, onProgress, quality = 'medium') {
     const info = await this.getFileInfo(inputPath);
     
     if (!info.hasMultipleVideoStreams) {
@@ -123,20 +138,19 @@ export class GoProProcessor {
     // Shrink each EAC half before v360. A MAX 2 clip is two 4096x1344
     // HEVC streams; projecting that at full size just to preview 720p
     // spends minutes before the first percent tick.
-    const previewWidth = 1280;
-    const previewHeight = 640;
+    const { width, height, crf, preset } = previewQualitySettings(quality);
     const args = [
       '-i', inputPath,
       '-filter_complex',
-      `[0:v:0]scale=${previewWidth}:-2[front];` +
-      `[0:v:1]scale=${previewWidth}:-2[back];` +
+      `[0:v:0]scale=${width}:-2[front];` +
+      `[0:v:1]scale=${width}:-2[back];` +
       `[front][back]vstack=inputs=2,` +
-      `v360=input=eac:output=equirect:interp=cubic:w=${previewWidth}:h=${previewHeight}[equirect]`,
+      `v360=input=eac:output=equirect:interp=cubic:w=${width}:h=${height}[equirect]`,
       '-map', '[equirect]',
       '-map', '0:a:0?',
       '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '28',
+      '-preset', preset,
+      '-crf', crf,
       '-pix_fmt', 'yuv420p',
       '-c:a', 'aac',
       '-b:a', '128k',

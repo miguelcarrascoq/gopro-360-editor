@@ -10,10 +10,21 @@ function wrapDegrees(degrees) {
 }
 
 const RECENT_FILES_KEY = 'gopro-recent-files';
+const PREVIEW_QUALITY_KEY = 'gopro-preview-quality';
 const RECENT_FILES_LIMIT = 8;
 const DEFAULT_FOV = 100;
 const MIN_FOV = 30;
 const MAX_FOV = 150;
+
+function readPreviewQuality() {
+    try {
+        const value = localStorage.getItem(PREVIEW_QUALITY_KEY);
+        if (value === 'low' || value === 'medium' || value === 'high') return value;
+    } catch {
+        // Storage can be unavailable; the default still works.
+    }
+    return 'medium';
+}
 
 function folderFromFile(filePath) {
     let folder = String(filePath).replace(/[\\/][^\\/]+$/, '');
@@ -135,6 +146,15 @@ class GoPro360Editor {
                 return;
             }
             this.closeExportMenu();
+        });
+        const previewQuality = document.getElementById('preview-quality');
+        previewQuality.value = readPreviewQuality();
+        previewQuality.addEventListener('change', () => {
+            try {
+                localStorage.setItem(PREVIEW_QUALITY_KEY, previewQuality.value);
+            } catch {
+                // Storage can be unavailable; the current choice still applies.
+            }
         });
         document.getElementById('export-btn').addEventListener('click', () => this.exportVideo());
         document.getElementById('play-pause').addEventListener('click', () => this.togglePlayback());
@@ -745,10 +765,11 @@ class GoPro360Editor {
         this.showPlaceholderProgress(0, 'Generating preview...');
 
         try {
+            const quality = document.getElementById('preview-quality').value || 'medium';
             const response = await fetch('/api/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filePath: this.currentFile })
+                body: JSON.stringify({ filePath: this.currentFile, quality })
             });
 
             const data = await response.json();
