@@ -40,37 +40,30 @@ export class TestGenerator {
   }
 
   async _generateVideoStream(outputPath, duration, color, label) {
-    const tryLabel = process.platform !== 'win32';
-    try {
-      await this._encodeVideoStream(outputPath, duration, color, label, tryLabel);
-    } catch (err) {
-      if (!tryLabel) throw err;
-      // drawtext needs a fontconfig setup that is often missing.
-      await this._encodeVideoStream(outputPath, duration, color, label, false);
-    }
+    await this._encodeVideoStream(outputPath, duration, color, label);
   }
 
-  _encodeVideoStream(outputPath, duration, color, label, withLabel) {
+  _encodeVideoStream(outputPath, duration, color, label) {
     return new Promise((resolve, reject) => {
+      // Full-frame hue cycle plus a large moving block, so playback stays
+      // obvious after the EAC-to-equirect preview warp.
+      const pattern = label === '1'
+        ? `color=c=${color}:s=960x480:r=30:d=${duration},format=yuv420p,hue=h='t*90',drawbox=x='960-t*220':y=80:w=240:h=320:color=yellow:t=fill`
+        : `color=c=${color}:s=960x480:r=30:d=${duration},format=yuv420p,hue=h='t*120',drawbox=x='t*260-192':y=96:w=192:h=288:color=white:t=fill`;
       const args = [
         '-f', 'lavfi',
-        '-i', `color=c=${color}:s=1920x960:d=${duration}`,
+        '-i', pattern,
         '-f', 'lavfi',
-        '-i', `sine=frequency=440:duration=${duration}`,
-      ];
-      if (withLabel) {
-        args.push(
-          '-vf',
-          `drawtext=text='Stream ${label}':fontsize=120:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2`
-        );
-      }
-      args.push(
+        '-i', `sine=frequency=${label === '1' ? 660 : 440}:duration=${duration}`,
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
+        '-pix_fmt', 'yuv420p',
+        '-g', '15',
         '-c:a', 'aac',
+        '-shortest',
         '-y',
         outputPath
-      );
+      ];
 
       const ffmpeg = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stderr = '';
