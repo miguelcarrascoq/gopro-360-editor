@@ -2,6 +2,8 @@
 
 Free local desktop tool to preview, trim, and export GoPro MAX / MAX 2 `.360` files as equirectangular MP4 videos compatible with YouTube and 360 players.
 
+![GoPro 360 Editor preview](docs/preview.webp)
+
 ## ✨ Features
 
 - **Interactive 360° preview**: Drag the mouse to look around in the video
