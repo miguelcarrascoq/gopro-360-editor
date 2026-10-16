@@ -643,8 +643,13 @@
             line-height: 1;
         }
 
-        .icon-btn:hover {
+        .icon-btn:hover:not(:disabled) {
             background: #4a4a4a;
+        }
+
+        .icon-btn:disabled {
+            color: #666;
+            cursor: not-allowed;
         }
 
         .places {
@@ -808,7 +813,7 @@
                     </svg>
                 </button>
                 <div class="export-menu">
-                    <button id="export-menu-btn" class="icon-btn header-icon" type="button" aria-label="Export" title="Export" aria-expanded="false" aria-controls="export-popover">
+                    <button id="export-menu-btn" class="icon-btn header-icon" type="button" aria-label="Export" title="Export" aria-expanded="false" aria-controls="export-popover" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
                         </svg>

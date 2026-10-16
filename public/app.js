@@ -58,6 +58,7 @@ class GoPro360Editor {
         this.fov = DEFAULT_FOV;
         this.ws = null;
         this.activeJob = null;
+        this.previewReady = false;
 
         this.init();
         this.setupWebSocket();
@@ -471,10 +472,20 @@ class GoPro360Editor {
     }
 
     toggleExportMenu() {
+        const menuBtn = document.getElementById('export-menu-btn');
+        if (menuBtn.disabled) return;
         const popover = document.getElementById('export-popover');
         const open = popover.hidden;
         popover.hidden = !open;
-        document.getElementById('export-menu-btn').setAttribute('aria-expanded', String(open));
+        menuBtn.setAttribute('aria-expanded', String(open));
+    }
+
+    setPreviewReady(ready) {
+        this.previewReady = ready;
+        document.getElementById('export-btn').disabled = !ready || this.activeJob === 'export';
+        const menuBtn = document.getElementById('export-menu-btn');
+        menuBtn.disabled = !ready;
+        if (!ready) this.closeExportMenu();
     }
 
     closeExportMenu() {
@@ -710,7 +721,7 @@ class GoPro360Editor {
 
         document.getElementById('timeline-container').style.display = 'none';
         document.getElementById('view-controls').hidden = true;
-        document.getElementById('export-btn').disabled = true;
+        this.setPreviewReady(false);
 
         if (this.video) {
             this.video.pause();
@@ -860,7 +871,7 @@ class GoPro360Editor {
             const videoPath = previewMediaUrl(job.outputPath);
             this.setupVideoPlayer(videoPath);
 
-            document.getElementById('export-btn').disabled = false;
+            this.setPreviewReady(true);
             document.getElementById('timeline-container').style.display = 'block';
             document.getElementById('view-controls').hidden = false;
             const placeholder = document.getElementById('placeholder');
