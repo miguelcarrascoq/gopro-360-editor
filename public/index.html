@@ -282,6 +282,91 @@
             z-index: 2;
         }
 
+        #view-controls {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.7rem 0.85rem;
+            background: rgba(42, 42, 42, 0.94);
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            user-select: none;
+        }
+
+        #view-controls[hidden] {
+            display: none;
+        }
+
+        .view-knob {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            width: 72px;
+        }
+
+        .knob {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 1px solid #4a4a4a;
+            background:
+                radial-gradient(circle at 50% 50%, transparent 60%, rgba(74, 158, 255, 0.18) 61%, rgba(74, 158, 255, 0.18) 68%, transparent 69%),
+                radial-gradient(circle at 32% 28%, #555, #1a1a1a 72%);
+            box-shadow: inset 0 0 0 1px #111, 0 2px 6px rgba(0, 0, 0, 0.45);
+            cursor: ns-resize;
+            position: relative;
+            touch-action: none;
+            padding: 0;
+        }
+
+        .knob:focus-visible {
+            outline: 2px solid #4a9eff;
+            outline-offset: 2px;
+        }
+
+        .knob-face {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            transform: rotate(var(--angle, 0deg));
+        }
+
+        .knob-mark {
+            position: absolute;
+            left: 50%;
+            top: 7px;
+            width: 3px;
+            height: 12px;
+            margin-left: -1.5px;
+            background: #4a9eff;
+            border-radius: 2px;
+            box-shadow: 0 0 6px rgba(74, 158, 255, 0.75);
+        }
+
+        .knob-label {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        .knob-value {
+            font-size: 0.8rem;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            min-width: 3.2rem;
+            text-align: center;
+        }
+
+        #view-reset {
+            width: auto;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
         .btn-row {
             display: flex;
             gap: 0.5rem;
@@ -456,6 +541,31 @@
         <div id="main">
             <div id="viewer-container">
                 <canvas id="viewer"></canvas>
+                <div id="view-controls" hidden>
+                    <div class="view-knob" data-axis="yaw">
+                        <button type="button" class="knob" aria-label="Horizontal" role="slider" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0">
+                            <span class="knob-face"><span class="knob-mark"></span></span>
+                        </button>
+                        <span class="knob-label">Horizontal</span>
+                        <span class="knob-value">0°</span>
+                    </div>
+                    <div class="view-knob" data-axis="pitch">
+                        <button type="button" class="knob" aria-label="Vertical" role="slider" aria-valuemin="-90" aria-valuemax="90" aria-valuenow="0">
+                            <span class="knob-face"><span class="knob-mark"></span></span>
+                        </button>
+                        <span class="knob-label">Vertical</span>
+                        <span class="knob-value">0°</span>
+                    </div>
+                    <div class="view-knob" data-axis="roll">
+                        <button type="button" class="knob" aria-label="Roll" role="slider" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0">
+                            <span class="knob-face"><span class="knob-mark"></span></span>
+                        </button>
+                        <span class="knob-label">Roll</span>
+                        <span class="knob-value">0°</span>
+                    </div>
+                    <button id="view-reset" class="btn btn-secondary" type="button">Reset</button>
+                </div>
+
                 <div id="placeholder">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />

@@ -5,6 +5,10 @@ function previewMediaUrl(outputPath) {
     return `/temp/${name}`;
 }
 
+function wrapDegrees(degrees) {
+    return ((degrees + 180) % 360 + 360) % 360 - 180;
+}
+
 class GoPro360Editor {
     constructor() {
         this.currentFile = null;
@@ -22,6 +26,9 @@ class GoPro360Editor {
         this.previousMousePosition = { x: 0, y: 0 };
         this.startTime = 0;
         this.endTime = 0;
+        this.yaw = 0;
+        this.pitch = 0;
+        this.roll = 0;
         this.ws = null;
 
         this.init();
@@ -42,6 +49,8 @@ class GoPro360Editor {
             1000
         );
         this.camera.position.set(0, 0, 0.1);
+        this.camera.rotation.order = 'YXZ';
+        this.applyView();
 
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -83,6 +92,7 @@ class GoPro360Editor {
         document.getElementById('preview-btn').addEventListener('click', () => this.generatePreview());
         document.getElementById('export-btn').addEventListener('click', () => this.exportVideo());
         document.getElementById('play-pause').addEventListener('click', () => this.togglePlayback());
+        this.setupViewControls();
 
         const canvas = document.getElementById('viewer');
         canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
@@ -171,10 +181,8 @@ class GoPro360Editor {
         const deltaX = event.clientX - this.previousMousePosition.x;
         const deltaY = event.clientY - this.previousMousePosition.y;
 
-        this.camera.rotation.y += deltaX * 0.005;
-        this.camera.rotation.x += deltaY * 0.005;
-
-        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+        this.setAxisDegrees('yaw', this.yaw * 180 / Math.PI + deltaX * 0.005 * 180 / Math.PI);
+        this.setAxisDegrees('pitch', this.pitch * 180 / Math.PI + deltaY * 0.005 * 180 / Math.PI);
 
         this.previousMousePosition = {
             x: event.clientX,
@@ -184,6 +192,90 @@ class GoPro360Editor {
 
     onMouseUp() {
         this.isDragging = false;
+    }
+
+    setupViewControls() {
+        document.querySelectorAll('.view-knob').forEach((knob) => {
+            const axis = knob.dataset.axis;
+            const dial = knob.querySelector('.knob');
+            dial.addEventListener('pointerdown', (event) => this.onKnobDown(event, axis));
+            dial.addEventListener('wheel', (event) => this.onKnobWheel(event, axis), { passive: false });
+            dial.addEventListener('dblclick', () => this.resetAxis(axis));
+        });
+        document.getElementById('view-reset').addEventListener('click', () => this.resetView());
+    }
+
+    onKnobDown(event, axis) {
+        event.preventDefault();
+        const dial = event.currentTarget;
+        dial.setPointerCapture(event.pointerId);
+        const startY = event.clientY;
+        const startDegrees = this[axis] * 180 / Math.PI;
+        const range = axis === 'pitch' ? 90 : 180;
+
+        const move = (moveEvent) => {
+            const delta = startY - moveEvent.clientY;
+            const fine = moveEvent.shiftKey ? 0.15 : 1;
+            this.setAxisDegrees(axis, startDegrees + delta * (range / 240) * fine);
+        };
+        const end = () => {
+            dial.removeEventListener('pointermove', move);
+            dial.removeEventListener('pointerup', end);
+            dial.removeEventListener('pointercancel', end);
+        };
+        dial.addEventListener('pointermove', move);
+        dial.addEventListener('pointerup', end);
+        dial.addEventListener('pointercancel', end);
+    }
+
+    onKnobWheel(event, axis) {
+        event.preventDefault();
+        const step = event.shiftKey ? 0.2 : 1;
+        const current = this[axis] * 180 / Math.PI;
+        this.setAxisDegrees(axis, current + (event.deltaY < 0 ? step : -step));
+    }
+
+    setAxisDegrees(axis, degrees) {
+        if (axis === 'pitch') {
+            degrees = Math.max(-90, Math.min(90, degrees));
+        } else {
+            degrees = wrapDegrees(degrees);
+        }
+        this[axis] = degrees * Math.PI / 180;
+        this.applyView();
+    }
+
+    resetAxis(axis) {
+        this[axis] = 0;
+        this.applyView();
+    }
+
+    resetView() {
+        this.yaw = 0;
+        this.pitch = 0;
+        this.roll = 0;
+        this.applyView();
+    }
+
+    applyView() {
+        this.camera.rotation.set(this.pitch, this.yaw, this.roll, 'YXZ');
+        this.syncViewControls();
+    }
+
+    syncViewControls() {
+        this.syncKnob('yaw', this.yaw);
+        this.syncKnob('pitch', this.pitch);
+        this.syncKnob('roll', this.roll);
+    }
+
+    syncKnob(axis, radians) {
+        const knob = document.querySelector(`.view-knob[data-axis="${axis}"]`);
+        if (!knob) return;
+
+        const degrees = Math.round(radians * 180 / Math.PI);
+        knob.querySelector('.knob-face').style.setProperty('--angle', `${degrees}deg`);
+        knob.querySelector('.knob-value').textContent = `${degrees}°`;
+        knob.querySelector('.knob').setAttribute('aria-valuenow', String(degrees));
     }
 
     openFileBrowser() {
@@ -502,6 +594,7 @@ class GoPro360Editor {
             document.getElementById('preview-progress').style.display = 'none';
             document.getElementById('export-btn').disabled = false;
             document.getElementById('timeline-container').style.display = 'block';
+            document.getElementById('view-controls').hidden = false;
             document.getElementById('placeholder').style.display = 'none';
 
             this.updateTimelineUI();
