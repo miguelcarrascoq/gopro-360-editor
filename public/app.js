@@ -11,6 +11,8 @@ class GoPro360Editor {
         this.fileInfo = null;
         this.previewPath = null;
         this.video = null;
+        this.videoTexture = null;
+        this.draggingMarker = null;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -90,35 +92,69 @@ class GoPro360Editor {
 
         // Timeline markers
         document.getElementById('start-marker').addEventListener('mousedown', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            this.draggingMarker = 'start';
+            this.beginMarkerDrag('start');
         });
 
         document.getElementById('end-marker').addEventListener('mousedown', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            this.draggingMarker = 'end';
+            this.beginMarkerDrag('end');
         });
 
-        document.getElementById('timeline').addEventListener('mousemove', (e) => {
-            if (this.draggingMarker && this.fileInfo) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const percent = Math.max(0, Math.min(1, x / rect.width));
-                const time = percent * this.fileInfo.duration;
+        document.addEventListener('mousemove', (e) => {
+            if (!this.draggingMarker || !this.fileInfo) return;
 
-                if (this.draggingMarker === 'start') {
-                    this.startTime = Math.min(time, this.endTime - 1);
-                } else {
-                    this.endTime = Math.max(time, this.startTime + 1);
-                }
+            const timeline = document.getElementById('timeline');
+            const rect = timeline.getBoundingClientRect();
+            if (rect.width <= 0) return;
 
-                this.updateTimelineUI();
+            const x = e.clientX - rect.left;
+            const percent = Math.max(0, Math.min(1, x / rect.width));
+            const time = percent * this.fileInfo.duration;
+
+            if (this.draggingMarker === 'start') {
+                this.startTime = Math.max(0, Math.min(time, this.endTime - 1));
+            } else {
+                this.endTime = Math.min(this.fileInfo.duration, Math.max(time, this.startTime + 1));
             }
+
+            this.updateTimelineUI();
+            this.seekPreview(this.draggingMarker === 'start' ? this.startTime : this.endTime);
         });
 
         document.addEventListener('mouseup', () => {
             this.draggingMarker = null;
         });
+    }
+
+    beginMarkerDrag(which) {
+        this.draggingMarker = which;
+        this.pausePreview();
+        this.seekPreview(which === 'start' ? this.startTime : this.endTime);
+    }
+
+    pausePreview() {
+        if (this.video) this.video.pause();
+        this.isPlaying = false;
+        const button = document.getElementById('play-pause');
+        if (button) button.textContent = '▶';
+    }
+
+    seekPreview(time) {
+        if (!this.video) return;
+
+        let maxTime = this.fileInfo ? this.fileInfo.duration : time;
+        if (Number.isFinite(this.video.duration) && this.video.duration > 0) {
+            maxTime = Math.min(maxTime, Math.max(0, this.video.duration - 0.05));
+        }
+
+        const clamped = Math.max(0, Math.min(time, maxTime));
+        if (this.video.readyState >= 1 && Math.abs(this.video.currentTime - clamped) > 0.01) {
+            this.video.currentTime = clamped;
+        }
+        this.updateCurrentTime(clamped);
     }
 
     onMouseDown(event) {
@@ -482,14 +518,14 @@ class GoPro360Editor {
         this.video.loop = true;
         this.video.muted = true;
 
-        const texture = new THREE.VideoTexture(this.video);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
+        this.videoTexture = new THREE.VideoTexture(this.video);
+        this.videoTexture.minFilter = THREE.LinearFilter;
+        this.videoTexture.magFilter = THREE.LinearFilter;
 
         const geometry = new THREE.SphereGeometry(500, 60, 40);
         geometry.scale(-1, 1, 1);
 
-        const material = new THREE.MeshBasicMaterial({ map: texture });
+        const material = new THREE.MeshBasicMaterial({ map: this.videoTexture });
 
         if (this.sphere) {
             this.scene.remove(this.sphere);
@@ -503,6 +539,11 @@ class GoPro360Editor {
         });
 
         this.video.addEventListener('timeupdate', () => {
+            this.updateCurrentTime();
+        });
+
+        this.video.addEventListener('seeked', () => {
+            if (this.videoTexture) this.videoTexture.needsUpdate = true;
             this.updateCurrentTime();
         });
     }
@@ -526,10 +567,10 @@ class GoPro360Editor {
         this.isPlaying = !this.isPlaying;
     }
 
-    updateCurrentTime() {
-        if (!this.video) return;
+    updateCurrentTime(displayTime) {
+        if (!this.video && displayTime == null) return;
 
-        const current = this.video.currentTime;
+        const current = displayTime != null ? displayTime : this.video.currentTime;
         const duration = this.fileInfo ? this.fileInfo.duration : this.video.duration;
 
         document.getElementById('current-time').textContent = 
