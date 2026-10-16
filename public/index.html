@@ -176,6 +176,29 @@
             background: #ef4444;
         }
 
+        #start-marker,
+        #end-marker {
+            z-index: 3;
+        }
+
+        #playhead {
+            left: 0;
+            z-index: 2;
+            width: 12px;
+            margin-left: -6px;
+            background: transparent;
+        }
+
+        #playhead::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 5px;
+            width: 2px;
+            background: #fff;
+        }
+
         .timeline-selection {
             position: absolute;
             top: 0;
@@ -576,6 +599,7 @@
                 <div id="timeline-container">
                     <div id="timeline">
                         <div class="timeline-selection"></div>
+                        <div id="playhead" class="timeline-marker"></div>
                         <div id="start-marker" class="timeline-marker"></div>
                         <div id="end-marker" class="timeline-marker"></div>
                     </div>
@@ -609,7 +633,8 @@
                 <div class="section">
                     <h2>3. Trim (optional)</h2>
                     <div class="instructions">
-                        Drag the <span style="color: #4ade80;">green</span> (start) and <span style="color: #ef4444;">red</span> (end) markers on the timeline
+                        Drag the <span style="color: #4ade80;">green</span> (start) and <span style="color: #ef4444;">red</span> (end) markers on the timeline.
+                        The <span style="color: #fff;">white</span> bar is the playback position: drag it, or click the timeline, to move the preview.
                     </div>
                     <div class="file-info-item">
                         <span class="file-info-label">Start:</span>

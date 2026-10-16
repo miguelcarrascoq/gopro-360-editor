@@ -26,6 +26,7 @@ class GoPro360Editor {
         this.previousMousePosition = { x: 0, y: 0 };
         this.startTime = 0;
         this.endTime = 0;
+        this.resumeAfterScrub = false;
         this.yaw = 0;
         this.pitch = 0;
         this.roll = 0;
@@ -113,36 +114,69 @@ class GoPro360Editor {
             this.beginMarkerDrag('end');
         });
 
+        document.getElementById('playhead').addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.beginMarkerDrag('play');
+        });
+
+        document.getElementById('timeline').addEventListener('mousedown', (e) => {
+            if (e.target.closest('#start-marker, #end-marker, #playhead')) return;
+            e.preventDefault();
+            this.beginMarkerDrag('play');
+            this.scrubPlayhead(e);
+        });
+
         document.addEventListener('mousemove', (e) => {
             if (!this.draggingMarker || !this.fileInfo) return;
 
-            const timeline = document.getElementById('timeline');
-            const rect = timeline.getBoundingClientRect();
-            if (rect.width <= 0) return;
-
-            const x = e.clientX - rect.left;
-            const percent = Math.max(0, Math.min(1, x / rect.width));
-            const time = percent * this.fileInfo.duration;
+            const time = this.timeFromTimelineEvent(e);
+            if (time == null) return;
 
             if (this.draggingMarker === 'start') {
                 this.startTime = Math.max(0, Math.min(time, this.endTime - 1));
-            } else {
+                this.updateTimelineUI();
+                this.seekPreview(this.startTime);
+            } else if (this.draggingMarker === 'end') {
                 this.endTime = Math.min(this.fileInfo.duration, Math.max(time, this.startTime + 1));
+                this.updateTimelineUI();
+                this.seekPreview(this.endTime);
+            } else {
+                this.seekPreview(time);
             }
-
-            this.updateTimelineUI();
-            this.seekPreview(this.draggingMarker === 'start' ? this.startTime : this.endTime);
         });
 
         document.addEventListener('mouseup', () => {
+            const resume = this.draggingMarker === 'play' && this.resumeAfterScrub;
             this.draggingMarker = null;
+            this.resumeAfterScrub = false;
+            if (resume) this.togglePlayback();
         });
     }
 
+    timeFromTimelineEvent(event) {
+        const timeline = document.getElementById('timeline');
+        const rect = timeline.getBoundingClientRect();
+        if (rect.width <= 0 || !this.fileInfo) return null;
+
+        const x = event.clientX - rect.left;
+        const percent = Math.max(0, Math.min(1, x / rect.width));
+        return percent * this.fileInfo.duration;
+    }
+
+    scrubPlayhead(event) {
+        const time = this.timeFromTimelineEvent(event);
+        if (time == null) return;
+        this.seekPreview(time);
+    }
+
     beginMarkerDrag(which) {
+        this.resumeAfterScrub = which === 'play' && this.isPlaying;
         this.draggingMarker = which;
         this.pausePreview();
-        this.seekPreview(which === 'start' ? this.startTime : this.endTime);
+        if (which !== 'play') {
+            this.seekPreview(which === 'start' ? this.startTime : this.endTime);
+        }
     }
 
     pausePreview() {
@@ -643,6 +677,10 @@ class GoPro360Editor {
 
     animate() {
         requestAnimationFrame(() => this.animate());
+        if (this.video && !this.video.paused && !this.draggingMarker) {
+            const duration = this.fileInfo ? this.fileInfo.duration : this.video.duration;
+            this.updatePlayhead(this.video.currentTime, duration);
+        }
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -668,6 +706,15 @@ class GoPro360Editor {
 
         document.getElementById('current-time').textContent = 
             `${this.formatTime(current)} / ${this.formatTime(duration)}`;
+        this.updatePlayhead(current, duration);
+    }
+
+    updatePlayhead(current, duration) {
+        const playhead = document.getElementById('playhead');
+        if (!playhead || !Number.isFinite(duration) || duration <= 0) return;
+
+        const percent = Math.max(0, Math.min(100, (current / duration) * 100));
+        playhead.style.left = `${percent}%`;
     }
 
     updateTimelineUI() {
